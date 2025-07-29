@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: terraform-state
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: terraform-state-pv
+  namespace: terraform-state
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: /var/lib/terraform-state
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: terraform-state-pvc
+  namespace: terraform-state
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: local-storage
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: terraform-state-server
+  namespace: terraform-state
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: terraform-state-server
+  template:
+    metadata:
+      labels:
+        app: terraform-state-server
+    spec:
+      containers:
+      - name: minio
+        image: minio/minio:latest
+        args:
+        - server
+        - /data
+        - --console-address
+        - ":9001"
+        env:
+        - name: MINIO_ROOT_USER
+          value: "terraform"
+        - name: MINIO_ROOT_PASSWORD
+          value: "terraform-state-password"
+        - name: MINIO_BROWSER_REDIRECT_URL
+          value: "http://terraform-state.tailnet:9001"
+        ports:
+        - containerPort: 9000
+          name: api
+        - containerPort: 9001
+          name: console
+        volumeMounts:
+        - name: storage
+          mountPath: /data
+        livenessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /minio/health/ready
+            port: 9000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: terraform-state-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: terraform-state-service
+  namespace: terraform-state
+spec:
+  selector:
+    app: terraform-state-server
+  ports:
+  - name: api
+    port: 9000
+    targetPort: 9000
+  - name: console
+    port: 9001
+    targetPort: 9001
+  type: ClusterIP
