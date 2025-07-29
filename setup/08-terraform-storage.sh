@@ -4,7 +4,7 @@ set -e
 
 echo "=========================================="
 echo "08 - Terraform State Storage Setup"
-echo "=========================================="
+echo "========================================="
 
 # Check if k3s is running
 if ! systemctl is-active --quiet k3s; then
@@ -31,15 +31,40 @@ kubectl apply -f k8s/terraform-state-storage.yaml
 echo "Waiting for terraform state server to be ready..."
 kubectl wait --for=condition=available --timeout=300s deployment/terraform-state-server -n terraform-state
 
-# Get Tailscale auth key and apply ingress
+# Get Tailscale auth key from Vault
 echo ""
 echo "=========================================="
 echo "Tailscale Setup"
 echo "=========================================="
-echo "To complete the setup, you need a Tailscale auth key."
-echo "Get one from: https://login.tailscale.com/admin/settings/keys"
-echo ""
-read -p "Enter your Tailscale auth key: " TAILSCALE_AUTH_KEY
+echo "Retrieving Tailscale auth key from Vault..."
+
+# Check if Vault is available
+if kubectl get deployment vault -n key-vault >/dev/null 2>&1; then
+  # Get Vault pod and root token
+  VAULT_POD=$(kubectl get pods -n key-vault -l app=vault -o jsonpath='{.items[0].metadata.name}')
+  ROOT_TOKEN=$(kubectl get secret vault-keys -n key-vault -o jsonpath='{.data.root-token}' | base64 -d)
+  
+  # Try to get Tailscale auth key from Vault
+  TAILSCALE_AUTH_KEY=$(kubectl exec -n key-vault $VAULT_POD -- sh -c "VAULT_TOKEN=$ROOT_TOKEN vault kv get -field=auth_key secret/tailscale 2>/dev/null" || echo "")
+  
+  if [ -n "$TAILSCALE_AUTH_KEY" ]; then
+    echo "✓ Successfully retrieved Tailscale auth key from Vault"
+  else
+    echo "⚠ Tailscale auth key not found in Vault"
+    echo "Please add it using one of these methods:"
+    echo "  1. Web UI: https://vault.tailnet"
+    echo "  2. CLI: vault kv put secret/tailscale auth_key=\"YOUR_KEY\""
+    echo "  3. See VAULT_USAGE.md for detailed instructions"
+    echo ""
+    read -p "Enter your Tailscale auth key manually: " TAILSCALE_AUTH_KEY
+  fi
+else
+  echo "⚠ Vault not found. Please run 07-key-vault.sh first."
+  echo "For now, entering auth key manually:"
+  echo "Get one from: https://login.tailscale.com/admin/settings/keys"
+  echo ""
+  read -p "Enter your Tailscale auth key: " TAILSCALE_AUTH_KEY
+fi
 
 if [ -z "$TAILSCALE_AUTH_KEY" ]; then
   echo "Warning: No auth key provided. Skipping Tailscale ingress setup."

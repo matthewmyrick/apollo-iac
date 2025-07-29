@@ -39,7 +39,8 @@ scripts=(
     "04-firewall-fail2ban.sh"
     "05-tailscale.sh"
     "06-k3s.sh"
-    "07-terraform-setup.sh"
+    "07-key-vault.sh"
+    "08-terraform-storage.sh"
 )
 
 for script in "${scripts[@]}"; do
