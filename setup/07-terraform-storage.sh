@@ -13,7 +13,7 @@ if ! systemctl is-active --quiet k3s; then
 fi
 
 # Create k8s directory if it doesn't exist
-mkdir -p ~/apollo-iac/k8s
+mkdir -p k8s
 
 # Create the storage directory on the host
 echo "Creating terraform state storage directory..."
@@ -25,21 +25,32 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
 # Apply the storage configuration
 echo "Deploying terraform state storage..."
-kubectl apply -f ~/apollo-iac/k8s/terraform-state-storage.yaml
+kubectl apply -f k8s/terraform-state-storage.yaml
 
 # Wait for deployment to be ready
 echo "Waiting for terraform state server to be ready..."
 kubectl wait --for=condition=available --timeout=300s deployment/terraform-state-server -n terraform-state
 
-# Get Tailscale auth key instruction
+# Get Tailscale auth key and apply ingress
 echo ""
 echo "=========================================="
-echo "IMPORTANT: Tailscale Setup Required"
+echo "Tailscale Setup"
 echo "=========================================="
-echo "1. Get a Tailscale auth key from: https://login.tailscale.com/admin/settings/keys"
-echo "2. Update the tailscale-ingress.yaml file with your auth key:"
-echo "   sed -i 's/YOUR_TAILSCALE_AUTH_KEY_HERE/YOUR_ACTUAL_KEY/' ~/apollo-iac/k8s/tailscale-ingress.yaml"
-echo "3. Then run: kubectl apply -f ~/apollo-iac/k8s/tailscale-ingress.yaml"
+echo "To complete the setup, you need a Tailscale auth key."
+echo "Get one from: https://login.tailscale.com/admin/settings/keys"
+echo ""
+read -p "Enter your Tailscale auth key: " TAILSCALE_AUTH_KEY
+
+if [ -z "$TAILSCALE_AUTH_KEY" ]; then
+  echo "Warning: No auth key provided. Skipping Tailscale ingress setup."
+  echo "You can manually apply it later with:"
+  echo "  sed -i 's/YOUR_TAILSCALE_AUTH_KEY_HERE/YOUR_ACTUAL_KEY/' k8s/tailscale-ingress.yaml"
+  echo "  kubectl apply -f k8s/tailscale-ingress.yaml"
+else
+  echo "Applying Tailscale ingress with your auth key..."
+  sed "s/YOUR_TAILSCALE_AUTH_KEY_HERE/$TAILSCALE_AUTH_KEY/" k8s/tailscale-ingress.yaml | kubectl apply -f -
+  echo "Tailscale ingress applied successfully!"
+fi
 echo ""
 
 # Create minio bucket for terraform state
