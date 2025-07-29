@@ -55,7 +55,8 @@ echo ""
 
 # Create minio bucket for terraform state
 echo "Creating terraform state bucket..."
-kubectl exec -n terraform-state deployment/terraform-state-server -- mc config host add local http://localhost:9000 terraform terraform-state-password
+# The line below has been updated from `mc config host add` to `mc alias set`
+kubectl exec -n terraform-state deployment/terraform-state-server -- mc alias set local http://localhost:9000 terraform terraform-state-password
 kubectl exec -n terraform-state deployment/terraform-state-server -- mc mb local/terraform-state || echo "Bucket may already exist"
 
 # Get service information
@@ -89,4 +90,3 @@ echo "    skip_region_validation = true"
 echo "    force_path_style = true"
 echo "  }"
 echo "}"
-
