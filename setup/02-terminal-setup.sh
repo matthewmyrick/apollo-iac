@@ -74,6 +74,12 @@ alias free='free -m'
 alias np='nano -w PKGBUILD'
 alias more='less'
 
+# ls
+alias ls='eza --icons --git --color=always --group-directories-first --tree --level=2 --no-permissions --no-user --no-time'
+
+# read files
+alias cat='bat --paging=never'
+
 # FZF configuration
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
 export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
