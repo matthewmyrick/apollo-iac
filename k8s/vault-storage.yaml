@@ -92,10 +92,11 @@ spec:
         securityContext:
           runAsUser: 100
           runAsGroup: 1000
-          fsGroup: 1000
           capabilities:
             add:
             - IPC_LOCK
+      securityContext:
+        fsGroup: 1000
       volumes:
       - name: vault-data
         persistentVolumeClaim:
