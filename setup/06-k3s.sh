@@ -30,7 +30,7 @@ kubectl apply -f https://raw.githubusercontent.com/tailscale/tailscale/main/cmd/
 
 # Wait for Tailscale operator to be ready
 echo "Waiting for Tailscale operator to be ready..."
-kubectl wait --for=condition=available --timeout=300s deployment/operator -n tailscale-system
+kubectl wait --for=condition=available --timeout=300s deployment/operator -n tailscale
 
 # Prompt for Tailscale auth key
 echo ""
