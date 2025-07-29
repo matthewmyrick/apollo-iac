@@ -90,6 +90,9 @@ spec:
         - name: vault-config
           mountPath: /vault/config
         securityContext:
+          runAsUser: 100
+          runAsGroup: 1000
+          fsGroup: 1000
           capabilities:
             add:
             - IPC_LOCK
