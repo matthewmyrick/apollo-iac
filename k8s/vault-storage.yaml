@@ -65,6 +65,18 @@ spec:
       labels:
         app: vault
     spec:
+      initContainers:
+      - name: vault-init
+        image: busybox:1.35
+        command:
+        - "sh"
+        - "-c"
+        - "chown -R 100:1000 /vault/data && chmod 755 /vault/data"
+        volumeMounts:
+        - name: vault-data
+          mountPath: /vault/data
+        securityContext:
+          runAsUser: 0
       containers:
       - name: vault
         image: hashicorp/vault:1.15
@@ -80,30 +92,49 @@ spec:
           value: "http://127.0.0.1:8200"
         - name: VAULT_CONFIG_DIR
           value: "/vault/config"
+        - name: VAULT_LOCAL_CONFIG
+          value: |
+            ui = true
+            disable_mlock = true
+            
+            storage "file" {
+              path = "/vault/data"
+            }
+            
+            listener "tcp" {
+              address = "0.0.0.0:8200"
+              tls_disable = true
+            }
+            
+            api_addr = "http://0.0.0.0:8200"
         args:
         - "vault"
         - "server"
-        - "-config=/vault/config/vault.hcl"
+        - "-config=/tmp/vault.hcl"
+        command:
+        - "sh"
+        - "-c"
+        - |
+          echo "$VAULT_LOCAL_CONFIG" > /tmp/vault.hcl
+          vault server -config=/tmp/vault.hcl
         volumeMounts:
         - name: vault-data
           mountPath: /vault/data
-        - name: vault-config
-          mountPath: /vault/config
         securityContext:
           runAsUser: 100
           runAsGroup: 1000
+          allowPrivilegeEscalation: false
           capabilities:
             add:
             - IPC_LOCK
+            drop:
+            - ALL
       securityContext:
         fsGroup: 1000
       volumes:
       - name: vault-data
         persistentVolumeClaim:
           claimName: vault-pvc
-      - name: vault-config
-        configMap:
-          name: vault-config
 
 ---
 apiVersion: v1
@@ -130,6 +161,7 @@ metadata:
     tailscale.com/expose: "true"
     tailscale.com/hostname: "vault"
 spec:
+  ingressClassName: tailscale
   rules:
   - host: vault.tailnet
     http:
