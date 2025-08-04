@@ -147,6 +147,10 @@ ff() {
         eza --tree --icons=always --level=2 # Corrected eza flag
     fi
 }
+
+echo 'alias fd=fdfind'
+
+echo 'alias bat=batcat'
 EOF
 
 # Install Oh My Zsh
