@@ -1,0 +1,196 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hashicorp-vault
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: hashicorp-vault
+    app.kubernetes.io/component: secrets-management
+    project: storage
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: storage
+  source:
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: 0.28.1  # Latest stable version as of 2024
+    helm:
+      parameters:
+        # Basic Vault configuration
+        - name: "server.dev.enabled"
+          value: "false"
+        - name: "server.standalone.enabled"
+          value: "true"
+        
+        # Storage configuration (file backend for simplicity)
+        - name: "server.standalone.config"
+          value: |
+            ui = true
+            
+            listener "tcp" {
+              tls_disable = 1
+              address = "[::]:8200"
+              cluster_address = "[::]:8201"
+            }
+            
+            storage "file" {
+              path = "/vault/data"
+            }
+            
+            # Example configuration for using auto-unseal with Kubernetes secrets
+            # seal "kubernetes" {
+            #   secret_name = "vault-unseal-key"
+            #   secret_key = "key"
+            # }
+        
+        # Service configuration - NodePort
+        - name: "server.service.type"
+          value: "NodePort"
+        - name: "server.service.nodePort"
+          value: "30201"
+        
+        # UI configuration
+        - name: "ui.enabled"
+          value: "true"
+        
+        # Resources
+        - name: "server.resources.requests.memory"
+          value: "256Mi"
+        - name: "server.resources.requests.cpu"
+          value: "250m"
+        - name: "server.resources.limits.memory"
+          value: "512Mi"
+        - name: "server.resources.limits.cpu"
+          value: "500m"
+        
+        # Data persistence
+        - name: "server.dataStorage.enabled"
+          value: "true"
+        - name: "server.dataStorage.size"
+          value: "10Gi"
+        - name: "server.dataStorage.storageClass"
+          value: "local-path"  # k3s default storage class
+        
+        # Security
+        - name: "server.readinessProbe.enabled"
+          value: "true"
+        - name: "server.livenessProbe.enabled"
+          value: "true"
+        
+        # Disable unnecessary components for single-node setup
+        - name: "injector.enabled"
+          value: "false"
+        - name: "csi.enabled"
+          value: "false"
+        
+      values: |
+        global:
+          enabled: true
+          tlsDisable: true
+        
+        server:
+          image:
+            repository: "hashicorp/vault"
+            tag: "1.15.6"
+            pullPolicy: IfNotPresent
+          
+          updateStrategy:
+            type: "OnDelete"
+          
+          # Single instance for simplicity
+          ha:
+            enabled: false
+            replicas: 1
+          
+          # Network policy (optional)
+          networkPolicy:
+            enabled: false
+          
+          # Service account
+          serviceAccount:
+            create: true
+            name: "vault"
+            
+          # Pod security context
+          securityContext:
+            runAsNonRoot: true
+            runAsGroup: 1000
+            runAsUser: 100
+            fsGroup: 1000
+          
+          # Node selector for single-node deployment
+          nodeSelector: {}
+          tolerations: []
+          affinity: {}
+          
+          # Environment variables
+          extraEnvironmentVars:
+            VAULT_CACERT: /vault/userconfig/vault-tls/ca.crt
+            VAULT_TLSCERT: /vault/userconfig/vault-tls/tls.crt
+            VAULT_TLSKEY: /vault/userconfig/vault-tls/tls.key
+            
+          # Additional volumes
+          volumes:
+            - name: userconfig-vault-tls
+              secret:
+                defaultMode: 420
+                secretName: vault-tls
+          
+          volumeMounts:
+            - mountPath: /vault/userconfig/vault-tls
+              name: userconfig-vault-tls
+              readOnly: true
+              
+          # Audit storage
+          auditStorage:
+            enabled: true
+            size: 10Gi
+            storageClass: local-path
+            
+        # UI specific configuration
+        ui:
+          enabled: true
+          publishNotReadyAddresses: true
+          activeVaultPodOnly: false
+          serviceType: "NodePort"
+          serviceNodePort: 30201
+          externalPort: 8200
+          
+        # Disable components not needed for basic setup
+        injector:
+          enabled: false
+          
+        csi:
+          enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  revisionHistoryLimit: 10
+  
+  # Health check configuration
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+        
+status: {}

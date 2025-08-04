@@ -1,0 +1,37 @@
+# ArgoCD Repository Configuration
+# This file defines the Git repositories that ArgoCD should have access to
+
+repositories:
+  - name: "portfolio-site"
+    url: "https://github.com/matthewmyrick/portfolio-site"
+    type: "git"
+    project: "portfolio-site"  # Will be changed to "portfolio-site" after projects are created
+    # For private repositories, you'll need to provide authentication
+    # Uncomment and configure one of the following methods:
+    
+    # Method 1: Username/Password (for private repos)
+    # username: "matthewmyrick"
+    # password: "your-github-token-here"
+    
+    # Method 2: SSH Key (for private repos)
+    # sshPrivateKey: |
+    #   -----BEGIN OPENSSH PRIVATE KEY-----
+    #   your-ssh-private-key-here
+    #   -----END OPENSSH PRIVATE KEY-----
+    
+    # Method 3: GitHub App (for organizations)
+    # githubAppPrivateKey: |
+    #   your-github-app-private-key
+    # githubAppId: "your-app-id"
+    # githubAppInstallationId: "your-installation-id"
+
+  - name: "hashicorp-helm-charts"
+    url: "https://helm.releases.hashicorp.com"
+    type: "helm"
+    project: "storage"
+
+  # Example of additional repository (uncomment to add more):
+  # - name: "another-repo"
+  #   url: "https://github.com/matthewmyrick/another-repo"
+  #   type: "git"
+  #   project: "default"
