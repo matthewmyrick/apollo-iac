@@ -1,0 +1,31 @@
+# ArgoCD UI Appearance Configuration
+# This configuration sets the ArgoCD UI to dark mode and other appearance settings
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Enable dark mode
+  ui.theme: "dark"
+  
+  # Custom banner message (optional)
+  ui.bannermessage: "Apollo Cluster - ArgoCD"
+  ui.bannermessage.permanent: "true"
+  
+  # Custom logo (optional - can be base64 encoded image or URL)
+  # ui.logo: ""
+  
+  # Help chat URL (optional)
+  # help.chatUrl: ""
+  # help.chatText: "Chat"
+  
+  # External URL for ArgoCD
+  url: "http://100.96.78.104:30969"
+  
+  # Application instance label key
+  application.instanceLabelKey: "argocd.argoproj.io/instance"

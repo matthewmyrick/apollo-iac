@@ -1,0 +1,47 @@
+# ArgoCD Cluster Configuration
+# This file defines additional Kubernetes clusters that ArgoCD should manage
+# 
+# IMPORTANT: The default cluster (https://kubernetes.default.svc) is automatically
+# configured by ArgoCD and should NOT be managed through this configuration.
+# This file is for ADDITIONAL clusters only.
+
+# Currently no additional clusters are configured.
+# The default apollo cluster (https://kubernetes.default.svc) is automatically available.
+
+# Example configuration for additional clusters:
+# clusters:
+#   - name: "staging-cluster"
+#     server: "https://staging-k8s-api.example.com"
+#     # Authentication method 1: Service Account Token
+#     config:
+#       bearerToken: "your-service-account-token-here"
+#       tlsClientConfig:
+#         insecure: false
+#         caData: "base64-encoded-ca-certificate"
+#   
+#   - name: "production-cluster"
+#     server: "https://prod-k8s-api.example.com"
+#     # Authentication method 2: Client Certificates
+#     config:
+#       tlsClientConfig:
+#         insecure: false
+#         caData: "base64-encoded-ca-certificate"
+#         certData: "base64-encoded-client-certificate"
+#         keyData: "base64-encoded-client-key"
+#   
+#   - name: "dev-cluster"
+#     server: "https://dev-k8s-api.example.com"
+#     # Authentication method 3: Username/Password (not recommended)
+#     config:
+#       username: "admin"
+#       password: "your-password"
+#       tlsClientConfig:
+#         insecure: true  # Only for development!
+
+# When you're ready to add additional clusters:
+# 1. Uncomment and modify the examples above
+# 2. Ensure you have proper authentication credentials
+# 3. Run ./apply.sh to add the clusters to ArgoCD
+# 4. Verify cluster connectivity in the ArgoCD UI
+
+clusters: []  # Empty list - no additional clusters configured yet

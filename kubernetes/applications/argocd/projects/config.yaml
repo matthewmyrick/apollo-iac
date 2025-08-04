@@ -1,0 +1,176 @@
+# ArgoCD Projects Configuration
+# This file defines the ArgoCD projects for organizing applications
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: portfolio-site
+  namespace: argocd
+  labels:
+    project-type: "web-application"
+spec:
+  description: "Portfolio website and related applications"
+  
+  # Source repositories that apps in this project can deploy from
+  sourceRepos:
+  - "https://github.com/matthewmyrick/portfolio-site"
+  - "https://github.com/matthewmyrick/*"  # Allow all matthewmyrick repos
+  - "*"  # Allow any repository (can be restricted later)
+  
+  # Destinations where apps can deploy to
+  destinations:
+  - namespace: "portfolio-*"
+    server: "https://kubernetes.default.svc"
+  - namespace: "default"
+    server: "https://kubernetes.default.svc"
+  - namespace: "kube-system"
+    server: "https://kubernetes.default.svc"
+  
+  # Cluster resource whitelist (what cluster-scoped resources can be deployed)
+  clusterResourceWhitelist:
+  - group: ""
+    kind: "Namespace"
+  - group: "rbac.authorization.k8s.io"
+    kind: "ClusterRole"
+  - group: "rbac.authorization.k8s.io"
+    kind: "ClusterRoleBinding"
+  
+  # Namespace resource whitelist (what namespaced resources can be deployed)
+  namespaceResourceWhitelist:
+  - group: ""
+    kind: "*"  # Allow all core resources
+  - group: "apps"
+    kind: "*"  # Allow all apps resources
+  - group: "networking.k8s.io"
+    kind: "*"  # Allow networking resources
+  - group: "extensions"
+    kind: "*"  # Allow extensions
+  
+  # Roles for project access control
+  roles:
+  - name: admin
+    description: "Full access to portfolio-site project"
+    policies:
+    - p, proj:portfolio-site:admin, applications, *, portfolio-site/*, allow
+    - p, proj:portfolio-site:admin, repositories, *, *, allow
+    groups:
+    - "argocd-admins"
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: telemetry
+  namespace: argocd
+  labels:
+    project-type: "monitoring"
+spec:
+  description: "Telemetry, monitoring, and observability applications"
+  
+  sourceRepos:
+  - "https://github.com/matthewmyrick/*"
+  - "https://prometheus-community.github.io/helm-charts"
+  - "https://grafana.github.io/helm-charts"
+  - "*"
+  
+  destinations:
+  - namespace: "telemetry-*"
+    server: "https://kubernetes.default.svc"
+  - namespace: "monitoring"
+    server: "https://kubernetes.default.svc"
+  - namespace: "observability"
+    server: "https://kubernetes.default.svc"
+  - namespace: "default"
+    server: "https://kubernetes.default.svc"
+  
+  clusterResourceWhitelist:
+  - group: ""
+    kind: "Namespace"
+  - group: "rbac.authorization.k8s.io"
+    kind: "ClusterRole"
+  - group: "rbac.authorization.k8s.io"
+    kind: "ClusterRoleBinding"
+  - group: "apiextensions.k8s.io"
+    kind: "CustomResourceDefinition"
+  
+  namespaceResourceWhitelist:
+  - group: ""
+    kind: "*"
+  - group: "apps"
+    kind: "*"
+  - group: "monitoring.coreos.com"
+    kind: "*"
+  - group: "networking.k8s.io"
+    kind: "*"
+  
+  roles:
+  - name: admin
+    description: "Full access to telemetry project"
+    policies:
+    - p, proj:telemetry:admin, applications, *, telemetry/*, allow
+    - p, proj:telemetry:admin, repositories, *, *, allow
+    groups:
+    - "argocd-admins"
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: storage
+  namespace: argocd
+  labels:
+    project-type: "storage"
+spec:
+  description: "Storage, databases, and persistent data applications"
+  
+  sourceRepos:
+  - "https://github.com/matthewmyrick/*"
+  - "https://charts.bitnami.com/bitnami"
+  - "https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner"
+  - "*"
+  
+  destinations:
+  - namespace: "storage-*"
+    server: "https://kubernetes.default.svc"
+  - namespace: "database"
+    server: "https://kubernetes.default.svc"
+  - namespace: "persistent-storage"
+    server: "https://kubernetes.default.svc"
+  - namespace: "vault"
+    server: "https://kubernetes.default.svc"
+  - namespace: "default"
+    server: "https://kubernetes.default.svc"
+  
+  clusterResourceWhitelist:
+  - group: ""
+    kind: "Namespace"
+  - group: ""
+    kind: "PersistentVolume"
+  - group: "storage.k8s.io"
+    kind: "StorageClass"
+  - group: "rbac.authorization.k8s.io"
+    kind: "ClusterRole"
+  - group: "rbac.authorization.k8s.io"
+    kind: "ClusterRoleBinding"
+  - group: "apiextensions.k8s.io"
+    kind: "CustomResourceDefinition"
+  
+  namespaceResourceWhitelist:
+  - group: ""
+    kind: "*"
+  - group: "apps"
+    kind: "*"
+  - group: "storage.k8s.io"
+    kind: "*"
+  - group: "networking.k8s.io"
+    kind: "*"
+  
+  roles:
+  - name: admin
+    description: "Full access to storage project"
+    policies:
+    - p, proj:storage:admin, applications, *, storage/*, allow
+    - p, proj:storage:admin, repositories, *, *, allow
+    groups:
+    - "argocd-admins"
