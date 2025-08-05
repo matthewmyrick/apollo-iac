@@ -48,11 +48,15 @@ spec:
         - name: "server.service.type"
           value: "NodePort"
         - name: "server.service.nodePort"
-          value: "30201"
+          value: "30200"
         
         # UI configuration
         - name: "ui.enabled"
           value: "true"
+        - name: "ui.serviceType"
+          value: "NodePort"
+        - name: "ui.serviceNodePort"
+          value: "30201"
         
         # Resources
         - name: "server.resources.requests.memory"
@@ -72,11 +76,19 @@ spec:
         - name: "server.dataStorage.storageClass"
           value: "local-path"  # k3s default storage class
         
-        # Security
+        # Security - disable probes that require TLS
         - name: "server.readinessProbe.enabled"
-          value: "true"
+          value: "false"
         - name: "server.livenessProbe.enabled"
-          value: "true"
+          value: "false"
+        
+        # Disable TLS-related environment variables
+        - name: "server.extraEnvironmentVars.VAULT_CACERT"
+          value: ""
+        - name: "server.extraEnvironmentVars.VAULT_TLSCERT"
+          value: ""
+        - name: "server.extraEnvironmentVars.VAULT_TLSKEY"
+          value: ""
         
         # Disable unnecessary components for single-node setup
         - name: "injector.enabled"
@@ -124,23 +136,24 @@ spec:
           tolerations: []
           affinity: {}
           
-          # Environment variables
+          # Environment variables - explicitly empty to override defaults
           extraEnvironmentVars:
-            VAULT_CACERT: /vault/userconfig/vault-tls/ca.crt
-            VAULT_TLSCERT: /vault/userconfig/vault-tls/tls.crt
-            VAULT_TLSKEY: /vault/userconfig/vault-tls/tls.key
-            
-          # Additional volumes
-          volumes:
-            - name: userconfig-vault-tls
-              secret:
-                defaultMode: 420
-                secretName: vault-tls
+            VAULT_ADDR: "http://127.0.0.1:8200"
           
-          volumeMounts:
-            - mountPath: /vault/userconfig/vault-tls
-              name: userconfig-vault-tls
-              readOnly: true
+          # Override volumes to remove TLS configuration
+          volumes: []
+          volumeMounts: []
+          
+          # Disable TLS volumes completely
+          extraVolumes: []
+          extraVolumeMounts: []
+          
+          # Disable health probes to avoid TLS issues
+          readinessProbe:
+            enabled: false
+            
+          livenessProbe:
+            enabled: false
               
           # Audit storage
           auditStorage:
@@ -156,6 +169,7 @@ spec:
           serviceType: "NodePort"
           serviceNodePort: 30201
           externalPort: 8200
+          targetPort: 8200
           
         # Disable components not needed for basic setup
         injector:
