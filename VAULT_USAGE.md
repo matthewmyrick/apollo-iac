@@ -35,6 +35,7 @@ curl -X POST \
 
 #### Install Vault CLI
 ```bash
+
 # macOS
 brew install vault
 
