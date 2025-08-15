@@ -127,7 +127,9 @@ spec:
   sourceRepos:
   - "https://github.com/matthewmyrick/*"
   - "https://charts.bitnami.com/bitnami"
+  - "https://helm.twun.io"  # Harbor Helm repository
   - "https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner"
+  - "https://docker.github.io/distribution-charts"  # Docker Registry
   - "*"
   
   destinations:
@@ -140,6 +142,10 @@ spec:
   - namespace: "vault"
     server: "https://kubernetes.default.svc"
   - namespace: "default"
+    server: "https://kubernetes.default.svc"
+  - namespace: "registry"
+    server: "https://kubernetes.default.svc"
+  - namespace: "registry-*"
     server: "https://kubernetes.default.svc"
   
   clusterResourceWhitelist:
@@ -172,5 +178,7 @@ spec:
     policies:
     - p, proj:storage:admin, applications, *, storage/*, allow
     - p, proj:storage:admin, repositories, *, *, allow
+    - p, proj:registry:admin, applications, *, registry/*, allow
+    - p, proj:registry:admin, repositories, *, *, allow
     groups:
     - "argocd-admins"

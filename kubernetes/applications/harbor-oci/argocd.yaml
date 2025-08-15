@@ -1,0 +1,204 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor-oci-registry
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: harbor-oci-registry
+    app.kubernetes.io/component: container-registry
+    project: storage
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: storage
+  source:
+    repoURL: https://helm.goharbor.io
+    chart: harbor
+    targetRevision: 1.17.2  # Latest stable version
+    helm:
+      parameters:
+        # Basic Harbor configuration
+        - name: "expose.type"
+          value: "nodePort"
+        - name: "expose.nodePort.ports.http.nodePort"
+          value: "30003"
+        - name: "expose.nodePort.ports.https.nodePort"
+          value: "30443"
+        
+        # External URL configuration
+        - name: "externalURL"
+          value: "http://apollo.local:30003"
+        
+        # Disable TLS for simplicity (can be enabled later)
+        - name: "expose.tls.enabled"
+          value: "false"
+        
+        # Admin password (should be changed after installation)
+        - name: "harborAdminPassword"
+          value: "Harbor12345"
+        
+        # Database configuration (internal PostgreSQL)
+        - name: "database.type"
+          value: "internal"
+        - name: "database.internal.password"
+          value: "changeme"
+        
+        # Redis configuration (internal Redis)
+        - name: "redis.type"
+          value: "internal"
+        
+        # Storage configuration
+        - name: "persistence.enabled"
+          value: "true"
+        - name: "persistence.persistentVolumeClaim.registry.storageClass"
+          value: "local-path"
+        - name: "persistence.persistentVolumeClaim.registry.size"
+          value: "20Gi"
+        - name: "persistence.persistentVolumeClaim.database.storageClass"
+          value: "local-path"
+        - name: "persistence.persistentVolumeClaim.database.size"
+          value: "5Gi"
+        - name: "persistence.persistentVolumeClaim.redis.storageClass"
+          value: "local-path"
+        - name: "persistence.persistentVolumeClaim.redis.size"
+          value: "1Gi"
+        - name: "persistence.persistentVolumeClaim.jobservice.jobLog.storageClass"
+          value: "local-path"
+        - name: "persistence.persistentVolumeClaim.jobservice.jobLog.size"
+          value: "1Gi"
+        
+        # Core component resources
+        - name: "core.resources.requests.memory"
+          value: "256Mi"
+        - name: "core.resources.requests.cpu"
+          value: "100m"
+        - name: "core.resources.limits.memory"
+          value: "512Mi"
+        - name: "core.resources.limits.cpu"
+          value: "500m"
+        
+        # Registry component resources
+        - name: "registry.resources.requests.memory"
+          value: "256Mi"
+        - name: "registry.resources.requests.cpu"
+          value: "100m"
+        - name: "registry.resources.limits.memory"
+          value: "512Mi"
+        - name: "registry.resources.limits.cpu"
+          value: "500m"
+        
+        # Portal component resources
+        - name: "portal.resources.requests.memory"
+          value: "128Mi"
+        - name: "portal.resources.requests.cpu"
+          value: "50m"
+        - name: "portal.resources.limits.memory"
+          value: "256Mi"
+        - name: "portal.resources.limits.cpu"
+          value: "200m"
+        
+        # Jobservice component resources
+        - name: "jobservice.resources.requests.memory"
+          value: "128Mi"
+        - name: "jobservice.resources.requests.cpu"
+          value: "50m"
+        - name: "jobservice.resources.limits.memory"
+          value: "256Mi"
+        - name: "jobservice.resources.limits.cpu"
+          value: "200m"
+        
+        # Disable components not needed for basic setup
+        - name: "trivy.enabled"
+          value: "true"  # Keep vulnerability scanning enabled
+        - name: "trivy.resources.requests.memory"
+          value: "128Mi"
+        - name: "trivy.resources.requests.cpu"
+          value: "50m"
+        - name: "trivy.resources.limits.memory"
+          value: "512Mi"
+        - name: "trivy.resources.limits.cpu"
+          value: "200m"
+        
+        - name: "notary.enabled"
+          value: "false"  # Disable notary for simplicity
+        
+        # Metrics
+        - name: "metrics.enabled"
+          value: "true"
+        - name: "metrics.serviceMonitor.enabled"
+          value: "false"  # Enable if Prometheus operator is installed
+        
+      values: |
+        # Additional Harbor configuration
+        updateStrategy:
+          type: RollingUpdate
+        
+        logLevel: info
+        
+        # Configure image pull policy
+        imagePullPolicy: IfNotPresent
+        
+        # Configure proxy cache
+        proxy:
+          httpProxy: ""
+          httpsProxy: ""
+          noProxy: "127.0.0.1,localhost,.local,.internal"
+        
+        # Configure garbage collection
+        registry:
+          credentials:
+            username: "harbor_registry_user"
+            password: "harbor_registry_password"
+          gc:
+            enabled: true
+            deleteUntagged: false
+            schedule: "0 0 * * *"  # Daily at midnight
+        
+        # Configure retention policy
+        core:
+          configureDefaultRetentionPolicy: true
+          defaultRetentionPolicy:
+            enabled: true
+            schedule: "0 0 * * *"
+            rules:
+              - template: "latestPushedK"
+                tagSelectors:
+                  - kind: "doublestar"
+                    pattern: "**"
+                scopeSelectors:
+                  repository:
+                    - kind: "doublestar"
+                      pattern: "**"
+                params:
+                  latestPushedK: 10  # Keep last 10 images
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: registry
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  revisionHistoryLimit: 10
+  
+  # Health check configuration
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+        
+status: {}
