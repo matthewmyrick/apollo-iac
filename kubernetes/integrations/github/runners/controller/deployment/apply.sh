@@ -46,23 +46,9 @@ check_github_token() {
   if kubectl get secret controller-manager -n github-runners &>/dev/null; then
     log_success "GitHub token secret exists"
   else
-    log_warning "GitHub token secret not found"
-    if [[ -z "$GITHUB_TOKEN" ]]; then
-      log_error "Please set GITHUB_TOKEN environment variable:"
-      echo "  export GITHUB_TOKEN=your_github_token_here"
-      echo "  kubectl create secret generic controller-manager \\"
-      echo "    --namespace=github-runners \\"
-      echo "    --from-literal=github_token=\"\$GITHUB_TOKEN\""
-      exit 1
-    else
-      log_info "Creating GitHub token secret..."
-      kubectl create namespace github-runners --dry-run=client -o yaml | kubectl apply -f -
-      kubectl create secret generic controller-manager \
-        --namespace=github-runners \
-        --from-literal=github_token="$GITHUB_TOKEN" \
-        --dry-run=client -o yaml | kubectl apply -f -
-      log_success "GitHub token secret created"
-    fi
+    log_error "GitHub token secret not found. Please deploy RBAC first:"
+    echo "  cd ../rbac/deployment && ./apply.sh"
+    exit 1
   fi
 }
 

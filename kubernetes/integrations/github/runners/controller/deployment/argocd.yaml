@@ -17,16 +17,16 @@ spec:
   source:
     repoURL: https://actions-runner-controller.github.io/actions-runner-controller
     chart: actions-runner-controller
-    targetRevision: 0.23.7
+    targetRevision: 0.27.4  # More recent stable version
     helm:
       parameters:
-        # Controller configuration
+        # Basic controller configuration
         - name: "authSecret.enabled"
           value: "true"
         - name: "authSecret.name"
           value: "controller-manager"
         
-        # Resource limits for controller
+        # Resource limits
         - name: "resources.requests.cpu"
           value: "100m"
         - name: "resources.requests.memory"
@@ -36,75 +36,30 @@ spec:
         - name: "resources.limits.memory"
           value: "256Mi"
         
-        # Metrics and monitoring
-        - name: "metrics.enable"
-          value: "true"
-        - name: "metrics.port"
-          value: "8080"
-        
-        # Enable leader election for HA
-        - name: "leaderElection.enabled"
-          value: "true"
-        
-        # Image configuration
-        - name: "image.repository"
-          value: "summerwind/actions-runner-controller"
-        - name: "image.pullPolicy"
-          value: "IfNotPresent"
-        
-        # Security context
-        - name: "securityContext.runAsNonRoot"
-          value: "true"
-        - name: "podSecurityContext.runAsNonRoot"
-          value: "true"
-        - name: "podSecurityContext.fsGroup"
-          value: "65534"
-        
       values: |
-        # Additional controller configuration
-        scope: 
-          singleNamespace: false  # Allow runners in any namespace
-        
-        # Override the fullname to match our RBAC resources
+        # Simplified controller configuration
         fullnameOverride: "gh-actions-runner-controller"
         
-        # Use existing service account (created in rbac deployment)
+        # Use existing service account
         serviceAccount:
           create: false
           name: actions-runner-controller
         
-        # Let Helm create additional RBAC resources it needs
+        # Let Helm create the RBAC it needs
         rbac:
           create: true
         
-        # Webhook configuration (optional for auto-scaling)
-        githubWebhookServer:
-          enabled: true
-          port: 9443
-          useRunnerPodHooks: true
-          service:
-            type: ClusterIP
-            port: 443
-            targetPort: 9443
-        
-        # Log level
+        # Basic settings
         logLevel: info
         
-        # Update strategy
-        strategy:
-          type: RollingUpdate
-          rollingUpdate:
-            maxUnavailable: 1
-            maxSurge: 1
-        
-        # Node selector for controller (optional)
-        nodeSelector: {}
-        
-        # Tolerations (optional)
-        tolerations: []
-        
-        # Affinity rules (optional)
-        affinity: {}
+        # Resource configuration
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
 
   destination:
     server: https://kubernetes.default.svc
