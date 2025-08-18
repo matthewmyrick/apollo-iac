@@ -1,0 +1,32 @@
+# ArgoCD OCI Repository Secrets
+# These secrets configure ArgoCD to access OCI Helm chart registries
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ghcr-actions-runner-controller
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  enableOCI: "true"
+  name: ghcr-actions-runner-controller
+  type: helm
+  url: ghcr.io/actions/actions-runner-controller-charts
+  project: integrations
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ghcr-io-registry
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  enableOCI: "true"
+  name: ghcr-io-registry
+  type: helm
+  url: ghcr.io
+  project: integrations

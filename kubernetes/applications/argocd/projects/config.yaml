@@ -147,6 +147,10 @@ spec:
     server: "https://kubernetes.default.svc"
   - namespace: "registry-*"
     server: "https://kubernetes.default.svc"
+  - namespace: "kube-system"
+    server: "https://kubernetes.default.svc"
+  - namespace: "sealed-secrets"
+    server: "https://kubernetes.default.svc" 
   
   clusterResourceWhitelist:
   - group: ""
@@ -171,6 +175,10 @@ spec:
     kind: "*"
   - group: "networking.k8s.io"
     kind: "*"
+  - group: "rbac.authorization.k8s.io"
+    kind: "RoleBinding"
+  - group: "rbac.authorization.k8s.io"
+    kind: "Role"
   
   roles:
   - name: admin
@@ -197,6 +205,8 @@ spec:
   sourceRepos:
   - "https://github.com/matthewmyrick/*"
   - "https://actions-runner-controller.github.io/actions-runner-controller"
+  - "ghcr.io/actions/actions-runner-controller-charts"
+  - "ghcr.io"
   - "https://helm.releases.hashicorp.com"
   - "*"
   
@@ -232,6 +242,8 @@ spec:
   - group: "networking.k8s.io"
     kind: "*"
   - group: "actions.summerwind.dev"
+    kind: "*"
+  - group: "actions.github.com"
     kind: "*"
   - group: "autoscaling"
     kind: "*"

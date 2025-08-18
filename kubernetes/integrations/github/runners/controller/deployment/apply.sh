@@ -17,8 +17,8 @@ log_error() { echo -e "${RED}❌ ${NC}${1}"; }
 print_banner() {
   echo -e "${BLUE}"
   echo "╔═══════════════════════════════════════════════════════╗"
-  echo "║     GitHub Actions Controller Setup (Step 2/3)       ║"
-  echo "║       Deploy controller Helm chart                    ║"
+  echo "║  GitHub Runner Scale Set Controller (Step 2/3)       ║"
+  echo "║     Deploy gha-runner-scale-set-controller           ║"
   echo "╚═══════════════════════════════════════════════════════╝"
   echo -e "${NC}\n"
 }
@@ -68,7 +68,7 @@ deploy_controller() {
     
     # Wait for deployment to be ready (may take a few minutes)
     log_info "This may take a few minutes for Helm chart to deploy..."
-    kubectl wait --for=condition=available --timeout=300s deployment/gh-actions-runner-controller -n github-runners 2>/dev/null || {
+    kubectl wait --for=condition=available --timeout=300s deployment/gha-runner-scale-set-controller -n github-runners 2>/dev/null || {
       log_warning "Deployment not ready yet, but application was created successfully"
     }
   else
@@ -87,15 +87,15 @@ show_status() {
   echo ""
   
   echo -e "${BLUE}Controller Deployment:${NC}"
-  kubectl get deployment gh-actions-runner-controller -n github-runners 2>/dev/null || log_info "Deployment not created yet"
+  kubectl get deployment gha-runner-scale-set-controller -n github-runners 2>/dev/null || log_info "Deployment not created yet"
   echo ""
   
   echo -e "${BLUE}Controller Pods:${NC}"
-  kubectl get pods -n github-runners -l app.kubernetes.io/name=actions-runner-controller 2>/dev/null || log_info "No controller pods yet"
+  kubectl get pods -n github-runners -l app.kubernetes.io/name=gha-runner-scale-set-controller 2>/dev/null || log_info "No controller pods yet"
   echo ""
   
   echo -e "${BLUE}Custom Resource Definitions:${NC}"
-  kubectl get crd | grep actions.summerwind.dev 2>/dev/null || log_info "CRDs not installed yet"
+  kubectl get crd | grep actions.github.com 2>/dev/null || log_info "CRDs not installed yet"
 }
 
 print_next_steps() {
@@ -110,7 +110,7 @@ print_next_steps() {
   echo -e "${BLUE}Monitor deployment:${NC}"
   echo "  kubectl get applications -n argocd"
   echo "  kubectl get pods -n github-runners"
-  echo "  kubectl logs -n github-runners deployment/gh-actions-runner-controller"
+  echo "  kubectl logs -n github-runners deployment/gha-runner-scale-set-controller"
 }
 
 # Main execution

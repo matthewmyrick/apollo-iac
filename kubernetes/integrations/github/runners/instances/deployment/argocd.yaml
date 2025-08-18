@@ -1,5 +1,6 @@
-# GitHub Runner Instances
-# Deploy this THIRD (after controller) to create actual runners
+# GitHub Runner Scale Set
+# Deploy this THIRD (after controller) to create actual runner scale sets
+# This uses the new GitHub-supported gha-runner-scale-set architecture
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -15,9 +16,57 @@ metadata:
 spec:
   project: integrations
   source:
-    repoURL: https://github.com/matthewmyrick/apollo-iac
-    path: kubernetes/integrations/github/runners/instances/k8
-    targetRevision: main
+    repoURL: ghcr.io/actions/actions-runner-controller-charts
+    chart: gha-runner-scale-set
+    targetRevision: 0.12.1  # Latest stable version (Jun 2024)
+    helm:
+      values: |
+        # GitHub Runner Scale Set Configuration
+        # Replace these values with your actual GitHub configuration
+        
+        # GitHub repository/organization configuration
+        githubConfigUrl: "https://github.com/matthewmyrick"  # Update with your org/repo
+        
+        # GitHub authentication - use sealed secrets for production
+        githubConfigSecret:
+          github_token: ""  # This should be set via sealed secrets
+        
+        # Runner configuration
+        minRunners: 0
+        maxRunners: 5
+        
+        # Container mode for Docker support
+        containerMode:
+          type: "dind"  # Docker-in-Docker support
+        
+        # Runner template configuration
+        template:
+          metadata:
+            labels:
+              environment: "home-lab"
+              project: "apollo-iac"
+          spec:
+            containers:
+            - name: runner
+              image: "ghcr.io/actions/actions-runner:latest"
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "1Gi"
+        
+        # Autoscaling behavior
+        autoscaling:
+          scaleDownDelaySecondsAfterScaleOut: 300
+          scaleUpTriggers:
+          - github_webhook
+          - poll_interval
+        
+        # Logging
+        logging:
+          level: "info"
   destination:
     server: https://kubernetes.default.svc
     namespace: github-runners

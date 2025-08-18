@@ -17,8 +17,8 @@ log_error() { echo -e "${RED}❌ ${NC}${1}"; }
 print_banner() {
   echo -e "${BLUE}"
   echo "╔═══════════════════════════════════════════════════════╗"
-  echo "║      GitHub Actions Runners Setup (Step 3/3)         ║"
-  echo "║         Deploy actual runner instances                ║"
+  echo "║     GitHub Runner Scale Set (Step 3/3)               ║"
+  echo "║       Deploy gha-runner-scale-set instances          ║"
   echo "╚═══════════════════════════════════════════════════════╝"
   echo -e "${NC}\n"
 }
@@ -31,14 +31,14 @@ check_prerequisites() {
   log_info "Checking prerequisites..."
   
   # Check if controller is deployed
-  if ! kubectl get deployment gh-actions-runner-controller -n github-runners &>/dev/null; then
+  if ! kubectl get deployment gha-runner-scale-set-controller -n github-runners &>/dev/null; then
     log_error "Controller not found. Please deploy controller first:"
     echo "  cd ../controller/deployment && ./apply.sh"
     exit 1
   fi
   
   # Check if CRDs are installed
-  if ! kubectl get crd runnerdeployments.actions.summerwind.dev &>/dev/null; then
+  if ! kubectl get crd autoscalingrunnersets.actions.github.com &>/dev/null; then
     log_error "CRDs not found. Controller may still be installing. Please wait and try again."
     exit 1
   fi

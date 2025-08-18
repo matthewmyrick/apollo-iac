@@ -1,5 +1,6 @@
-# Actions Runner Controller Helm Chart
+# GitHub Actions Runner Scale Set Controller (ARC)
 # Deploy this SECOND (after RBAC) to install CRDs and controller
+# This uses the new GitHub-supported gha-runner-scale-set architecture
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -15,42 +16,29 @@ metadata:
 spec:
   project: integrations
   source:
-    repoURL: https://actions-runner-controller.github.io/actions-runner-controller
-    chart: actions-runner-controller
-    targetRevision: 0.27.4  # More recent stable version
+    repoURL: ghcr.io/actions/actions-runner-controller-charts
+    chart: gha-runner-scale-set-controller
+    targetRevision: 0.12.1  # Latest stable version (Jun 2024)
     helm:
-      parameters:
-        # Basic controller configuration
-        - name: "authSecret.enabled"
-          value: "true"
-        - name: "authSecret.name"
-          value: "controller-manager"
-        
-        # Resource limits
-        - name: "resources.requests.cpu"
-          value: "100m"
-        - name: "resources.requests.memory"
-          value: "128Mi"
-        - name: "resources.limits.cpu"
-          value: "500m"
-        - name: "resources.limits.memory"
-          value: "256Mi"
-        
       values: |
-        # Simplified controller configuration
-        fullnameOverride: "gh-actions-runner-controller"
+        # gha-runner-scale-set-controller configuration
+        # This is the new GitHub-supported architecture
         
-        # Use existing service account
+        # Controller configuration
+        controllerManagerConfigYaml: |
+          controller:
+            leaderElection:
+              enabled: true
+              namespace: github-runners
+          metrics:
+            bindAddress: 0.0.0.0:8080
+          webhook:
+            port: 9443
+        
+        # Service account configuration
         serviceAccount:
           create: false
           name: actions-runner-controller
-        
-        # Let Helm create the RBAC it needs
-        rbac:
-          create: true
-        
-        # Basic settings
-        logLevel: info
         
         # Resource configuration
         resources:
@@ -60,6 +48,10 @@ spec:
           limits:
             cpu: 500m
             memory: 256Mi
+        
+        # Security context
+        securityContext:
+          runAsNonRoot: true
 
   destination:
     server: https://kubernetes.default.svc

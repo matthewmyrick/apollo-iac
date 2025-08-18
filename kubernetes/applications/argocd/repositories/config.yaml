@@ -44,6 +44,7 @@ repositories:
     type: "helm"
     project: "integrations"
 
+
   # Example of additional repository (uncomment to add more):
   # - name: "another-repo"
   #   url: "https://github.com/matthewmyrick/another-repo"

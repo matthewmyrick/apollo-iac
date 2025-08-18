@@ -1,0 +1,103 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sealed-secrets
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: sealed-secrets
+    app.kubernetes.io/component: secrets-management
+    project: storage
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: storage
+  source:
+    repoURL: https://bitnami-labs.github.io/sealed-secrets
+    chart: sealed-secrets
+    targetRevision: 2.15.4  # Latest stable version
+    helm:
+      parameters:
+        # Controller configuration
+        - name: "fullnameOverride"
+          value: "sealed-secrets-controller"
+        
+        # Resource limits
+        - name: "resources.requests.cpu"
+          value: "50m"
+        - name: "resources.requests.memory"
+          value: "64Mi"
+        - name: "resources.limits.cpu"
+          value: "200m"
+        - name: "resources.limits.memory"
+          value: "256Mi"
+        
+        # Security context
+        - name: "securityContext.runAsNonRoot"
+          value: "true"
+        - name: "securityContext.runAsUser"
+          value: "1001"
+        - name: "securityContext.fsGroup"
+          value: "65534"
+        
+        # Service configuration
+        - name: "service.type"
+          value: "ClusterIP"
+        - name: "service.port"
+          value: "8080"
+        
+        # Metrics
+        - name: "metrics.serviceMonitor.enabled"
+          value: "false"
+        
+      values: |
+        # Additional controller configuration
+        # Keep the master key for cluster lifetime
+        keyrenewperiod: "0"  # Never rotate key automatically
+        
+        # Controller settings
+        controllerImage:
+          tag: "v0.24.5"
+        
+        # Security
+        podSecurityContext:
+          runAsNonRoot: true
+          fsGroup: 65534
+        
+        # Node selection (optional)
+        nodeSelector: {}
+        
+        # Tolerations (optional)
+        tolerations: []
+        
+        # Affinity rules (optional)
+        affinity: {}
+        
+        # Update strategy
+        updateStrategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxUnavailable: 1
+            maxSurge: 1
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sealed-secrets  # Standard location for sealed-secrets
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  revisionHistoryLimit: 10
+  
+status: {}

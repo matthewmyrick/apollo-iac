@@ -45,14 +45,20 @@ print_banner() {
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/config.yaml"
+OCI_REPOS_FILE="$SCRIPT_DIR/oci-repositories.yaml"
 
 # Start
 print_banner
 
-# Check if config file exists
+# Check if config files exist
 if [ ! -f "$CONFIG_FILE" ]; then
     log_error "Configuration file not found: $CONFIG_FILE"
     exit 1
+fi
+
+if [ ! -f "$OCI_REPOS_FILE" ]; then
+    log_warning "OCI repositories file not found: $OCI_REPOS_FILE"
+    log_info "Continuing without OCI repository configuration..."
 fi
 
 # Check kubectl connection
@@ -112,6 +118,16 @@ else
     kill $PORT_FORWARD_PID 2>/dev/null || true
     log_error "Failed to login to ArgoCD. Please check if ArgoCD is running properly."
     exit 1
+fi
+
+# Apply OCI repository secrets if file exists
+if [ -f "$OCI_REPOS_FILE" ]; then
+    log_step "Applying OCI repository secrets"
+    if kubectl apply -f "$OCI_REPOS_FILE"; then
+        log_success "OCI repository secrets configured"
+    else
+        log_error "Failed to apply OCI repository secrets"
+    fi
 fi
 
 # Parse and apply repository configurations
