@@ -28,9 +28,8 @@ spec:
             repository: "tailscale/tailscale"
             tag: "v1.86.2"
         
-        # OAuth secret configuration
-        oauth:
-          clientSecret: "tailscale"  # Use our correctly named secret
+        # OAuth secret configuration - reference existing secret
+        operatorSecretName: "tailscale"
         
         # RBAC configuration
         rbac:
