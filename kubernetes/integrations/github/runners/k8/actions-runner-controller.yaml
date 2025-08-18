@@ -1,0 +1,119 @@
+# Actions Runner Controller Helm Deployment
+# This installs the controller that manages GitHub Actions runners
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: actions-runner-controller
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: actions-runner-controller
+    app.kubernetes.io/component: ci-cd-controller
+    project: integrations
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: integrations
+  source:
+    repoURL: https://actions-runner-controller.github.io/actions-runner-controller
+    chart: actions-runner-controller
+    targetRevision: 0.23.7  # Latest stable version
+    helm:
+      parameters:
+        # Controller configuration
+        - name: "authSecret.enabled"
+          value: "true"
+        - name: "authSecret.name"
+          value: "controller-manager"
+        
+        # Resource limits for controller
+        - name: "resources.requests.cpu"
+          value: "100m"
+        - name: "resources.requests.memory"
+          value: "128Mi"
+        - name: "resources.limits.cpu"
+          value: "500m"
+        - name: "resources.limits.memory"
+          value: "256Mi"
+        
+        # Metrics and monitoring
+        - name: "metrics.enable"
+          value: "true"
+        - name: "metrics.port"
+          value: "8080"
+        
+        # Enable leader election for HA
+        - name: "leaderElection.enabled"
+          value: "true"
+        
+        # Image configuration
+        - name: "image.repository"
+          value: "summerwind/actions-runner-controller"
+        - name: "image.pullPolicy"
+          value: "IfNotPresent"
+        
+        # Security context
+        - name: "securityContext.runAsNonRoot"
+          value: "true"
+        - name: "podSecurityContext.runAsNonRoot"
+          value: "true"
+        - name: "podSecurityContext.fsGroup"
+          value: "65534"
+        
+      values: |
+        # Additional controller configuration
+        scope: 
+          singleNamespace: false  # Allow runners in any namespace
+        
+        # Webhook configuration (optional for auto-scaling)
+        githubWebhookServer:
+          enabled: true
+          port: 9443
+          useRunnerPodHooks: true
+          service:
+            type: ClusterIP
+            port: 443
+            targetPort: 9443
+        
+        # Log level
+        logLevel: info
+        
+        # Update strategy
+        strategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxUnavailable: 1
+            maxSurge: 1
+        
+        # Node selector for controller (optional)
+        nodeSelector: {}
+        
+        # Tolerations (optional)
+        tolerations: []
+        
+        # Affinity rules (optional)
+        affinity: {}
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: github-runners
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  revisionHistoryLimit: 10
+  
+status: {}

@@ -1,0 +1,31 @@
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: HorizontalRunnerAutoscaler
+metadata:
+  name: apollo-runner-autoscaler
+  namespace: github-runners
+  labels:
+    app: apollo-runner-autoscaler
+spec:
+  # Reference to the RunnerDeployment to scale
+  scaleTargetRef:
+    name: apollo-github-runners
+  
+  # Minimum and maximum number of runners
+  minReplicas: 1
+  maxReplicas: 10
+  
+  # Scaling metrics
+  metrics:
+    # Scale based on percentage of runners that are busy
+    - type: PercentageRunnersBusy
+      scaleUpThreshold: "0.75"    # Scale up when 75% of runners are busy
+      scaleDownThreshold: "0.25"  # Scale down when only 25% are busy
+      scaleUpFactor: "2"          # Double the runners when scaling up
+      scaleDownFactor: "0.5"      # Halve the runners when scaling down
+  
+  # Scale-up/down behavior
+  scaleUpCooldownPeriod: "1m"    # Wait 1 minute before scaling up again
+  scaleDownCooldownPeriod: "5m"  # Wait 5 minutes before scaling down again
+  
+  # Scale down delay (keep runners alive for a bit after jobs finish)
+  scaleDownDelaySecondsAfterScaleOut: 60

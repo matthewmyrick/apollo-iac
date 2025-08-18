@@ -30,6 +30,20 @@ repositories:
     type: "helm"
     project: "storage"
 
+  - name: "apollo-iac"
+    url: "https://github.com/matthewmyrick/apollo-iac"
+    type: "git"
+    project: "integrations"
+    # For private repositories, configure authentication
+    # Method 1: Username/Token (recommended for private repos)
+    # username: "matthewmyrick"
+    # password: "your-github-token-here"
+    
+  - name: "actions-runner-controller-helm"
+    url: "https://actions-runner-controller.github.io/actions-runner-controller"
+    type: "helm"
+    project: "integrations"
+
   # Example of additional repository (uncomment to add more):
   # - name: "another-repo"
   #   url: "https://github.com/matthewmyrick/another-repo"

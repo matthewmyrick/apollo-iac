@@ -182,3 +182,65 @@ spec:
     - p, proj:registry:admin, repositories, *, *, allow
     groups:
     - "argocd-admins"
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: integrations
+  namespace: argocd
+  labels:
+    project-type: "integrations"
+spec:
+  description: "CI/CD integrations, runners, and external service integrations"
+  
+  sourceRepos:
+  - "https://github.com/matthewmyrick/*"
+  - "https://actions-runner-controller.github.io/actions-runner-controller"
+  - "https://helm.releases.hashicorp.com"
+  - "*"
+  
+  destinations:
+  - namespace: "github-runners"
+    server: "https://kubernetes.default.svc"
+  - namespace: "integrations-*"
+    server: "https://kubernetes.default.svc"
+  - namespace: "cicd"
+    server: "https://kubernetes.default.svc"
+  - namespace: "default"
+    server: "https://kubernetes.default.svc"
+  
+  clusterResourceWhitelist:
+  - group: ""
+    kind: "Namespace"
+  - group: "rbac.authorization.k8s.io"
+    kind: "ClusterRole"
+  - group: "rbac.authorization.k8s.io"
+    kind: "ClusterRoleBinding"
+  - group: "apiextensions.k8s.io"
+    kind: "CustomResourceDefinition"
+  - group: "admissionregistration.k8s.io"
+    kind: "MutatingWebhookConfiguration"
+  - group: "admissionregistration.k8s.io"
+    kind: "ValidatingWebhookConfiguration"
+  
+  namespaceResourceWhitelist:
+  - group: ""
+    kind: "*"
+  - group: "apps"
+    kind: "*"
+  - group: "networking.k8s.io"
+    kind: "*"
+  - group: "actions.summerwind.dev"
+    kind: "*"
+  - group: "autoscaling"
+    kind: "*"
+  
+  roles:
+  - name: admin
+    description: "Full access to integrations project"
+    policies:
+    - p, proj:integrations:admin, applications, *, integrations/*, allow
+    - p, proj:integrations:admin, repositories, *, *, allow
+    groups:
+    - "argocd-admins"
