@@ -27,41 +27,13 @@ print_banner() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARGOCD_FILE="${SCRIPT_DIR}/argocd.yaml"
 
-check_github_token() {
-  log_info "Checking GitHub token..."
-  
-  if [[ -z "$GITHUB_TOKEN" ]]; then
-    log_error "GITHUB_TOKEN environment variable not set"
-    echo ""
-    echo "Please set your GitHub Personal Access Token:"
-    echo "1. Go to GitHub Settings > Developer settings > Personal access tokens"
-    echo "2. Create a new token with these permissions:"
-    echo "   - repo (for repository-level runners)"
-    echo "   - admin:org (for organization-level runners)"
-    echo "   - workflow"
-    echo ""
-    echo "Then run:"
-    echo "export GITHUB_TOKEN=your_token_here"
-    echo "$0"
-    exit 1
-  fi
-  
-  log_success "GitHub token provided"
-}
-
-create_github_secret() {
-  log_info "Creating GitHub token secret..."
+create_namespace() {
+  log_info "Creating namespace..."
   
   # Create namespace first
   kubectl create namespace github-runners --dry-run=client -o yaml | kubectl apply -f -
   
-  # Create the secret
-  kubectl create secret generic controller-manager \
-    --namespace=github-runners \
-    --from-literal=github_token="$GITHUB_TOKEN" \
-    --dry-run=client -o yaml | kubectl apply -f -
-  
-  log_success "GitHub token secret created"
+  log_success "Namespace created/verified"
 }
 
 deploy_rbac() {
@@ -106,8 +78,8 @@ show_status() {
   kubectl get clusterrolebinding actions-runner-controller 2>/dev/null || log_info "ClusterRoleBinding not created yet"
   echo ""
   
-  echo -e "${BLUE}GitHub Token Secret:${NC}"
-  kubectl get secret controller-manager -n github-runners 2>/dev/null || log_info "GitHub token secret not created yet"
+  echo -e "${BLUE}GitHub Token Secret (create separately):${NC}"
+  kubectl get secret github-runner-token -n github-runners 2>/dev/null || log_info "GitHub token secret not created yet - create with create-github-token.sh"
 }
 
 print_next_steps() {
@@ -129,8 +101,7 @@ print_banner
 
 case "${1:-deploy}" in
   deploy)
-    check_github_token
-    create_github_secret
+    create_namespace
     deploy_rbac
     show_status
     print_next_steps

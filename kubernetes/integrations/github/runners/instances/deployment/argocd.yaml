@@ -29,17 +29,19 @@ spec:
           name: github-actions-controller-gha-rs-controller
           namespace: github-runners
         
-        # GitHub repository/organization configuration
-        githubConfigUrl: "https://github.com/matthewmyrick"  # Update with your org/repo
+        # GitHub repository configuration (for repo-level runners)
+        githubConfigUrl: "https://github.com/matthewmyrick/apollo-iac"  # Point to specific repo
         
-        # GitHub authentication - use sealed secrets for production
-        githubConfigSecret:
-          github_token: ""  # This should be set via sealed secrets
-          create: false
+        # GitHub authentication - reference pre-existing secret
+        # The secret must exist in the same namespace with key: github_token
+        githubConfigSecret: github-runner-token
         
         # Runner configuration
         minRunners: 0
         maxRunners: 5
+        
+        # Custom runner scale set name (this becomes a label)
+        runnerScaleSetName: "apollo-runners"
         
         # Container mode for Docker support
         containerMode:

@@ -1,0 +1,18 @@
+name: Hello World
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  hello:
+    runs-on: [self-hosted, apollo-runners]
+    
+    steps:
+    - name: Say Hello
+      run: |
+        echo "🎉 Hello World from apollo-runners!"
+        echo "Runner: $(hostname)"
+        echo "Date: $(date)"
