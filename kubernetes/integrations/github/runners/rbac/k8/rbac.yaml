@@ -1,5 +1,5 @@
 # RBAC resources for Actions Runner Controller
-# These need to be created before the Helm chart is deployed
+# These are deployed first to create necessary permissions
 
 ---
 apiVersion: v1
@@ -7,16 +7,12 @@ kind: ServiceAccount
 metadata:
   name: actions-runner-controller
   namespace: github-runners
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"  # Deploy before controller
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: actions-runner-controller
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"  # Deploy before controller
 rules:
 - apiGroups: [""]
   resources: ["events"]
@@ -51,8 +47,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: actions-runner-controller
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"  # Deploy before controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -68,8 +62,6 @@ kind: Role
 metadata:
   name: actions-runner-controller-leader-election
   namespace: github-runners
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"  # Deploy before controller
 rules:
 - apiGroups: [""]
   resources: ["configmaps"]
@@ -87,8 +79,6 @@ kind: RoleBinding
 metadata:
   name: actions-runner-controller-leader-election
   namespace: github-runners
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"  # Deploy before controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -98,43 +88,3 @@ subjects:
   name: actions-runner-controller
   namespace: github-runners
 
----
-# Additional ClusterRole that the Helm chart expects
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: gh-actions-runner-controller-runner-viewer
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"  # Deploy before controller
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["pods/log"]
-  verbs: ["get", "list"]
-- apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["apps"]
-  resources: ["deployments", "replicasets"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["actions.summerwind.dev"]
-  resources: ["*"]
-  verbs: ["get", "list", "watch"]
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: gh-actions-runner-controller-runner-viewer
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"  # Deploy before controller
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gh-actions-runner-controller-runner-viewer
-subjects:
-- kind: ServiceAccount
-  name: actions-runner-controller
-  namespace: github-runners

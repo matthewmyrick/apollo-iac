@@ -73,9 +73,9 @@ spec:
           create: false
           name: actions-runner-controller
         
-        # Disable RBAC creation since we handle it separately
+        # Let Helm create additional RBAC resources it needs
         rbac:
-          create: false
+          create: true
         
         # Webhook configuration (optional for auto-scaling)
         githubWebhookServer:
