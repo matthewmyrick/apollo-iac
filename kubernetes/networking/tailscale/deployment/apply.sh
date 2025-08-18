@@ -90,8 +90,8 @@ create_tailscale_secret() {
   # Create namespace first
   kubectl create namespace tailscale-operator --dry-run=client -o yaml | kubectl apply -f -
   
-  # Create the OAuth secret
-  kubectl create secret generic operator-oauth \
+  # Create the Tailscale OAuth secret (standard name expected by operator)
+  kubectl create secret generic tailscale \
     --namespace=tailscale-operator \
     --from-literal=client_secret="$TAILSCALE_OAUTH_SECRET" \
     --dry-run=client -o yaml | kubectl apply -f -
