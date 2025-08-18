@@ -53,8 +53,12 @@ spec:
             labels:
               environment: "home-lab"
               project: "apollo-iac"
+            annotations:
+              # Enable Tailscale networking for internet access
+              tailscale.com/expose: "false"  # Don't expose to Tailscale network, just use for egress
+              tailscale.com/tags: "tag:k8s,tag:github-runner"
           spec:
-            # Add host networking to access Tailscale
+            # Temporarily use host network until Tailscale operator is fixed
             hostNetwork: true
             dnsPolicy: ClusterFirstWithHostNet
             containers:
@@ -67,12 +71,8 @@ spec:
                 limits:
                   cpu: "500m"
                   memory: "1Gi"
-              # Add environment variables for proxy if needed
-              env:
-              - name: https_proxy
-                value: ""  # Add your Tailscale exit node if using proxy
-              - name: http_proxy  
-                value: ""
+              # Environment variables (Tailscale handles routing automatically)
+              env: []
         
         # Autoscaling behavior
         autoscaling:
