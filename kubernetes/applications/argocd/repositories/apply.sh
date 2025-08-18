@@ -150,11 +150,12 @@ while IFS= read -r line; do
             log_warning "Repository $REPO_NAME already exists, skipping..."
         else
             # Add repository (assuming public for now)
-            if argocd repo add "$REPO_URL" --name "$REPO_NAME" &>/dev/null; then
+            if argocd repo add "$REPO_URL" --name "$REPO_NAME" 2>&1 | grep -q "already exists"; then
+                log_warning "Repository $REPO_NAME already registered"
+            elif argocd repo add "$REPO_URL" --name "$REPO_NAME" &>/dev/null; then
                 log_success "Added repository: $REPO_NAME"
             else
-                log_error "Failed to add repository: $REPO_NAME"
-                log_warning "If this is a private repository, you may need to provide authentication credentials in config.yaml"
+                log_warning "Could not add repository: $REPO_NAME (may require authentication)"
             fi
         fi
         
@@ -182,6 +183,11 @@ echo -e ""
 
 # Show current repositories
 log_step "Current ArgoCD Repositories"
+
+# Kill any existing port-forwards to avoid conflicts
+pkill -f "kubectl port-forward svc/argocd-server" 2>/dev/null || true
+sleep 2
+
 kubectl port-forward svc/argocd-server -n argocd 8080:80 &>/dev/null &
 PORT_FORWARD_PID=$!
 sleep 3
@@ -191,4 +197,6 @@ if argocd login localhost:8080 --insecure --username admin --password "$ADMIN_PA
     argocd repo list 2>/dev/null || log_warning "Could not list repositories"
 fi
 
+# Clean up port-forward
 kill $PORT_FORWARD_PID 2>/dev/null || true
+wait $PORT_FORWARD_PID 2>/dev/null || true

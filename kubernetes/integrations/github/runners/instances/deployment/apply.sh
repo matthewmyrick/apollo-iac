@@ -75,20 +75,20 @@ show_status() {
   kubectl get application github-actions-runners -n argocd -o wide 2>/dev/null || log_warning "Application not found"
   echo ""
   
-  echo -e "${BLUE}Runner Deployments:${NC}"
-  kubectl get runnerdeployments -n github-runners 2>/dev/null || log_info "No runner deployments yet"
+  echo -e "${BLUE}Runner Scale Sets:${NC}"
+  kubectl get autoscalingrunnersets -n github-runners 2>/dev/null || log_info "No runner scale sets yet"
   echo ""
   
   echo -e "${BLUE}Active Runners:${NC}"
-  kubectl get runners -n github-runners 2>/dev/null || log_info "No active runners yet"
+  kubectl get ephemeralrunners -n github-runners 2>/dev/null || log_info "No active runners yet"
   echo ""
   
   echo -e "${BLUE}Runner Pods:${NC}"
-  kubectl get pods -n github-runners -l app=apollo-github-runners 2>/dev/null || log_info "No runner pods yet"
+  kubectl get pods -n github-runners -l app.kubernetes.io/name=gha-runner-scale-set 2>/dev/null || log_info "No runner pods yet"
   echo ""
   
-  echo -e "${BLUE}Autoscaler:${NC}"
-  kubectl get hra -n github-runners 2>/dev/null || log_info "No autoscaler yet"
+  echo -e "${BLUE}Runner Scale Set Status:${NC}"
+  kubectl get autoscalinglisteners -n github-runners 2>/dev/null || log_info "No listeners yet"
 }
 
 print_completion() {
@@ -108,9 +108,10 @@ print_completion() {
   echo "  runs-on: [self-hosted, apollo]"
   echo ""
   echo -e "${BLUE}Monitor runners:${NC}"
-  echo "  kubectl get runners -n github-runners"
+  echo "  kubectl get autoscalingrunnersets -n github-runners"
+  echo "  kubectl get ephemeralrunners -n github-runners"
   echo "  kubectl get pods -n github-runners"
-  echo "  kubectl logs -n github-runners -l app=apollo-github-runners"
+  echo "  kubectl logs -n github-runners -l app.kubernetes.io/name=gha-runner-scale-set"
   echo ""
   echo -e "${BLUE}ArgoCD UI:${NC} http://home.apollo.io:30969"
 }
