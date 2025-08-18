@@ -43,18 +43,19 @@ print_banner() {
 }
 
 # Harbor configuration
-HARBOR_URL="http://100.96.78.104:30003"
+HARBOR_URL="http://harbor.apollo.io:30003"
 HARBOR_USERNAME="admin"
 HARBOR_PASSWORD="Harbor12345"
 
-# Default registries to create
-REGISTRIES=(
-  "apollo-apps:Core Apollo applications and services"
-  "apollo-infrastructure:Infrastructure components and tools"
-  "apollo-dev:Development and testing images"
-  "apollo-ml:Machine learning models and data science tools"
-  "third-party:Mirrored third-party images"
-)
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+REGISTRIES_FILE="${SCRIPT_DIR}/registries.json"
+
+# Check if registries.json exists
+if [[ ! -f "$REGISTRIES_FILE" ]]; then
+  log_error "registries.json file not found at: $REGISTRIES_FILE"
+  exit 1
+fi
 
 # Function to check if Harbor is accessible
 check_harbor_access() {
@@ -69,20 +70,25 @@ check_harbor_access() {
   log_success "Harbor is accessible"
 }
 
-# Function to get Harbor API token
-get_harbor_token() {
-  log_step "Authenticating with Harbor"
+# Function to test Harbor authentication
+test_harbor_auth() {
+  log_step "Testing Harbor authentication"
   
-  # Try to get a token
-  TOKEN_RESPONSE=$(curl -s -X POST "${HARBOR_URL}/c/login" \
-    -H "Content-Type: application/x-www-form-urlencoded" \
-    -d "principal=${HARBOR_USERNAME}&password=${HARBOR_PASSWORD}" \
-    -c /tmp/harbor_cookies.txt \
-    -w "%{http_code}")
+  # Create base64 encoded credentials for Basic Auth
+  AUTH_HEADER="Basic $(echo -n "${HARBOR_USERNAME}:${HARBOR_PASSWORD}" | base64)"
   
-  if [[ "${TOKEN_RESPONSE: -3}" != "200" ]]; then
-    log_error "Failed to authenticate with Harbor"
+  # Test authentication by getting current user info
+  local response=$(curl -s -w "%{http_code}" \
+    -H "Authorization: ${AUTH_HEADER}" \
+    "${HARBOR_URL}/api/v2.0/users/current")
+  
+  local http_code="${response: -3}"
+  
+  if [[ "$http_code" != "200" ]]; then
+    log_error "Failed to authenticate with Harbor (HTTP ${http_code})"
     log_info "Please check your Harbor credentials"
+    log_info "Username: ${HARBOR_USERNAME}"
+    log_info "Make sure the password is correct and the user has API access"
     exit 1
   fi
   
@@ -94,7 +100,7 @@ project_exists() {
   local project_name="$1"
   
   local response=$(curl -s -w "%{http_code}" \
-    -b /tmp/harbor_cookies.txt \
+    -H "Authorization: ${AUTH_HEADER}" \
     "${HARBOR_URL}/api/v2.0/projects?name=${project_name}")
   
   local http_code="${response: -3}"
@@ -128,7 +134,7 @@ create_harbor_project() {
   local create_response=$(curl -s -w "%{http_code}" \
     -X POST "${HARBOR_URL}/api/v2.0/projects" \
     -H "Content-Type: application/json" \
-    -b /tmp/harbor_cookies.txt \
+    -H "Authorization: ${AUTH_HEADER}" \
     -d "{
       \"project_name\": \"${project_name}\",
       \"metadata\": {
@@ -160,7 +166,7 @@ list_projects() {
   log_step "Listing all Harbor projects"
   
   local response=$(curl -s -w "%{http_code}" \
-    -b /tmp/harbor_cookies.txt \
+    -H "Authorization: ${AUTH_HEADER}" \
     "${HARBOR_URL}/api/v2.0/projects")
   
   local http_code="${response: -3}"
@@ -197,22 +203,31 @@ fi
 # Check Harbor access
 check_harbor_access
 
-# Get authentication token
-get_harbor_token
+# Set up authentication header
+AUTH_HEADER="Basic $(echo -n "${HARBOR_USERNAME}:${HARBOR_PASSWORD}" | base64)"
+
+# Test authentication
+test_harbor_auth
 
 # List existing projects
 list_projects
 
 # Create registries
-log_step "Creating Harbor registries"
+log_step "Creating Harbor registries from $REGISTRIES_FILE"
 
-for registry_config in "${REGISTRIES[@]}"; do
-  IFS=':' read -r project_name project_description <<< "$registry_config"
+# Read and parse the JSON file
+REGISTRIES_JSON=$(cat "$REGISTRIES_FILE")
+
+# Parse each registry from the JSON
+echo "$REGISTRIES_JSON" | jq -c '.[]' | while read -r registry; do
+  project_name=$(echo "$registry" | jq -r '.name')
+  project_description=$(echo "$registry" | jq -r '.description')
+  
+  log_info "Processing registry: $project_name"
   create_harbor_project "$project_name" "$project_description"
 done
 
-# Clean up temporary files
-rm -f /tmp/harbor_cookies.txt
+# No cleanup needed for Basic Auth
 
 # Final status
 echo -e "\n${GREEN}═══════════════════════════════════════════════${NC}"
@@ -223,14 +238,14 @@ echo -e "${GREEN}═════════════════════
 list_projects
 
 echo -e "${CYAN}${BOLD}Registry Usage Examples:${NC}"
-echo -e "${BLUE}Tag and push to apollo-apps:${NC}"
-echo -e "  docker tag myapp:latest 100.96.78.104:30003/apollo-apps/myapp:latest"
-echo -e "  docker push 100.96.78.104:30003/apollo-apps/myapp:latest"
-echo -e ""
-echo -e "${BLUE}Tag and push to apollo-infrastructure:${NC}"
-echo -e "  docker tag monitoring:latest 100.96.78.104:30003/apollo-infrastructure/monitoring:latest"
-echo -e "  docker push 100.96.78.104:30003/apollo-infrastructure/monitoring:latest"
-echo -e ""
+
+# Show usage examples based on created registries
+echo "$REGISTRIES_JSON" | jq -r '.[0:2] | .[] | .name' | while read -r registry_name; do
+  echo -e "${BLUE}Tag and push to ${registry_name}:${NC}"
+  echo -e "  docker tag myapp:latest harbor.apollo.io:30003/${registry_name}/myapp:latest"
+  echo -e "  docker push harbor.apollo.io:30003/${registry_name}/myapp:latest"
+  echo -e ""
+done
 
 echo -e "${YELLOW}${BOLD}💡 Next Steps:${NC}"
 echo -e "${BLUE}1. Configure your CI/CD pipelines to use these registries${NC}"

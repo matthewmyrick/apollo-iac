@@ -1,0 +1,10 @@
+[
+  {
+    "name": "frontend",
+    "description": "Frontend applications and UI components"
+  },
+  {
+    "name": "backend",
+    "description": "Backend services and APIs"
+  }
+]
