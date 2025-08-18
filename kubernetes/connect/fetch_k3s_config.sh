@@ -96,6 +96,7 @@ fi
 # remove the backups cretead by the script
 echo -e "${YELLOW}Cleaning up temporary files...${NC}"
 rm -f "$HOME/.kube/backups/config.backup.*"
+rm -rf "$HOME/.kube/backups"
 echo -e "${GREEN}Cleanup complete!${NC}"
 
 echo -e "${GREEN}═══════════════════════════════════════════════${NC}"
