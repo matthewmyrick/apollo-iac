@@ -24,12 +24,18 @@ spec:
         # GitHub Runner Scale Set Configuration
         # Replace these values with your actual GitHub configuration
         
+        # Controller service account reference
+        controllerServiceAccount:
+          name: github-actions-controller-gha-rs-controller
+          namespace: github-runners
+        
         # GitHub repository/organization configuration
         githubConfigUrl: "https://github.com/matthewmyrick"  # Update with your org/repo
         
         # GitHub authentication - use sealed secrets for production
         githubConfigSecret:
           github_token: ""  # This should be set via sealed secrets
+          create: false
         
         # Runner configuration
         minRunners: 0

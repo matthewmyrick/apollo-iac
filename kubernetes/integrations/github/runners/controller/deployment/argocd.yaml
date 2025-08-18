@@ -24,34 +24,23 @@ spec:
         # gha-runner-scale-set-controller configuration
         # This is the new GitHub-supported architecture
         
-        # Controller configuration
-        controllerManagerConfigYaml: |
-          controller:
-            leaderElection:
-              enabled: true
-              namespace: github-runners
-          metrics:
-            bindAddress: 0.0.0.0:8080
-          webhook:
-            port: 9443
-        
-        # Service account configuration
-        serviceAccount:
-          create: false
-          name: actions-runner-controller
+        # Image configuration (use default)
+        image:
+          repository: "ghcr.io/actions/gha-runner-scale-set-controller"
+          tag: "0.12.1"
         
         # Resource configuration
         resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
           limits:
             cpu: 500m
             memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
         
-        # Security context
-        securityContext:
-          runAsNonRoot: true
+        # Logging
+        logLevel: "info"
+        logFormat: "json"
 
   destination:
     server: https://kubernetes.default.svc
@@ -66,6 +55,7 @@ spec:
       - CreateNamespace=true
       - PrunePropagationPolicy=foreground
       - PruneLast=true
+      - Replace=true
     retry:
       limit: 5
       backoff:
