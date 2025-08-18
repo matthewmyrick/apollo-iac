@@ -1,14 +1,14 @@
-# Actions Runner Controller Helm Deployment
-# This installs the controller that manages GitHub Actions runners
+# Actions Runner Controller Helm Chart
+# Deploy this SECOND (after RBAC) to install CRDs and controller
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: actions-runner-controller
+  name: github-actions-controller
   namespace: argocd
   labels:
-    app.kubernetes.io/name: actions-runner-controller
-    app.kubernetes.io/component: ci-cd-controller
+    app.kubernetes.io/name: github-actions-controller
+    app.kubernetes.io/component: controller
     project: integrations
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -17,7 +17,7 @@ spec:
   source:
     repoURL: https://actions-runner-controller.github.io/actions-runner-controller
     chart: actions-runner-controller
-    targetRevision: 0.23.7  # Latest stable version
+    targetRevision: 0.23.7
     helm:
       parameters:
         # Controller configuration
@@ -64,6 +64,18 @@ spec:
         # Additional controller configuration
         scope: 
           singleNamespace: false  # Allow runners in any namespace
+        
+        # Override the fullname to match our RBAC resources
+        fullnameOverride: "gh-actions-runner-controller"
+        
+        # Use existing service account (created in rbac deployment)
+        serviceAccount:
+          create: false
+          name: actions-runner-controller
+        
+        # Disable RBAC creation since we handle it separately
+        rbac:
+          create: false
         
         # Webhook configuration (optional for auto-scaling)
         githubWebhookServer:

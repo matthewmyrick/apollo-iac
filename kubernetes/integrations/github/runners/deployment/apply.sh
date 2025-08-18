@@ -55,25 +55,25 @@ fi
 # Function to check if kubectl is available and connected
 check_prerequisites() {
   log_step "Checking prerequisites"
-  
-  if ! command -v kubectl &> /dev/null; then
+
+  if ! command -v kubectl &>/dev/null; then
     log_error "kubectl is not installed or not in PATH"
     exit 1
   fi
-  
-  if ! kubectl cluster-info &> /dev/null; then
+
+  if ! kubectl cluster-info &>/dev/null; then
     log_error "Cannot connect to Kubernetes cluster"
     exit 1
   fi
-  
+
   log_success "Prerequisites check passed"
 }
 
 # Function to check GitHub token secret
 check_github_token() {
   log_step "Checking GitHub token secret"
-  
-  if kubectl get secret controller-manager -n github-runners &> /dev/null; then
+
+  if kubectl get secret controller-manager -n github-runners &>/dev/null; then
     log_success "GitHub token secret exists"
   else
     log_warning "GitHub token secret not found"
@@ -99,17 +99,17 @@ check_github_token() {
 # Function to deploy GitHub runners via ArgoCD
 deploy_runners() {
   log_step "Deploying GitHub Actions Runners via ArgoCD"
-  
+
   # Apply the ArgoCD application
   kubectl apply -f "$ARGOCD_FILE"
-  
+
   if [[ $? -eq 0 ]]; then
     log_success "ArgoCD application applied successfully"
   else
     log_error "Failed to apply ArgoCD application"
     exit 1
   fi
-  
+
   log_info "ArgoCD will now sync and deploy the GitHub runners"
   log_info "Monitor progress in ArgoCD UI or use: kubectl get applications -n argocd"
 }
@@ -117,26 +117,26 @@ deploy_runners() {
 # Function to check deployment status
 check_status() {
   log_step "Checking deployment status"
-  
+
   # Check ArgoCD application
   echo -e "${BLUE}ArgoCD Application:${NC}"
-  kubectl get application github-actions-runners -n argocd -o wide 2>/dev/null || {
+  kubectl get application github-actions -n argocd -o wide 2>/dev/null || {
     log_warning "ArgoCD application not found"
     return 1
   }
-  
+
   echo ""
-  
+
   # Check if namespace exists
-  if kubectl get namespace github-runners &> /dev/null; then
+  if kubectl get namespace github-runners &>/dev/null; then
     echo -e "${BLUE}GitHub Runners Namespace:${NC}"
     kubectl get pods -n github-runners 2>/dev/null || log_info "No pods yet (ArgoCD may still be syncing)"
     echo ""
-    
+
     echo -e "${BLUE}Runner Deployments:${NC}"
     kubectl get runnerdeployments -n github-runners 2>/dev/null || log_info "No runner deployments yet"
     echo ""
-    
+
     echo -e "${BLUE}Active Runners:${NC}"
     kubectl get runners -n github-runners 2>/dev/null || log_info "No active runners yet"
   else
@@ -147,11 +147,11 @@ check_status() {
 # Function to remove GitHub runners
 remove_runners() {
   log_step "Removing GitHub Actions Runners"
-  
+
   log_warning "This will remove the ArgoCD application and all GitHub runners"
   read -p "Are you sure? (y/N): " -n 1 -r
   echo
-  
+
   if [[ $REPLY =~ ^[Yy]$ ]]; then
     kubectl delete -f "$ARGOCD_FILE" --ignore-not-found=true
     log_success "ArgoCD application removed"
@@ -188,27 +188,28 @@ show_usage() {
 print_banner
 
 case "${1:-deploy}" in
-  deploy)
-    check_prerequisites
-    check_github_token
-    deploy_runners
-    check_status
-    show_usage
-    ;;
-    
-  status)
-    check_status
-    ;;
-    
-  remove)
-    remove_runners
-    ;;
-    
-  *)
-    echo "Usage: $0 [deploy|status|remove]"
-    echo "  deploy - Deploy GitHub runners via ArgoCD (default)"
-    echo "  status - Show current deployment status"
-    echo "  remove - Remove GitHub runners deployment"
-    exit 1
-    ;;
+deploy)
+  check_prerequisites
+  check_github_token
+  deploy_runners
+  check_status
+  show_usage
+  ;;
+
+status)
+  check_status
+  ;;
+
+remove)
+  remove_runners
+  ;;
+
+*)
+  echo "Usage: $0 [deploy|status|remove]"
+  echo "  deploy - Deploy GitHub runners via ArgoCD (default)"
+  echo "  status - Show current deployment status"
+  echo "  remove - Remove GitHub runners deployment"
+  exit 1
+  ;;
 esac
+

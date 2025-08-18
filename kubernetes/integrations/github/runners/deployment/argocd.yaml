@@ -1,23 +1,123 @@
+# Single ArgoCD Application for GitHub Actions Integration
+# Deploys both the controller (Helm) and runners (Git repo) together
+
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: github-actions-runners
+  name: github-actions
   namespace: argocd
   labels:
-    app.kubernetes.io/name: github-actions-runners
+    app.kubernetes.io/name: github-actions
     app.kubernetes.io/component: ci-cd-integration
     project: integrations
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: integrations
-  source:
-    repoURL: https://github.com/matthewmyrick/apollo-iac
-    path: kubernetes/integrations/github/runners/k8
-    targetRevision: main
+  
+  # Multiple sources - both Helm chart and Git repo
+  sources:
+    # Source 1: Actions Runner Controller Helm Chart
+    - repoURL: https://actions-runner-controller.github.io/actions-runner-controller
+      chart: actions-runner-controller
+      targetRevision: 0.23.7
+      helm:
+        parameters:
+          # Controller configuration
+          - name: "authSecret.enabled"
+            value: "true"
+          - name: "authSecret.name"
+            value: "controller-manager"
+          
+          # Resource limits for controller
+          - name: "resources.requests.cpu"
+            value: "100m"
+          - name: "resources.requests.memory"
+            value: "128Mi"
+          - name: "resources.limits.cpu"
+            value: "500m"
+          - name: "resources.limits.memory"
+            value: "256Mi"
+          
+          # Metrics and monitoring
+          - name: "metrics.enable"
+            value: "true"
+          - name: "metrics.port"
+            value: "8080"
+          
+          # Enable leader election for HA
+          - name: "leaderElection.enabled"
+            value: "true"
+          
+          # Image configuration
+          - name: "image.repository"
+            value: "summerwind/actions-runner-controller"
+          - name: "image.pullPolicy"
+            value: "IfNotPresent"
+          
+          # Security context
+          - name: "securityContext.runAsNonRoot"
+            value: "true"
+          - name: "podSecurityContext.runAsNonRoot"
+            value: "true"
+          - name: "podSecurityContext.fsGroup"
+            value: "65534"
+          
+        values: |
+          # Additional controller configuration
+          scope: 
+            singleNamespace: false  # Allow runners in any namespace
+          
+          # Override the fullname to match our RBAC resources
+          fullnameOverride: "gh-actions-runner-controller"
+          
+          # Use existing service account (created in k8/rbac.yaml)
+          serviceAccount:
+            create: false
+            name: actions-runner-controller
+          
+          # Disable RBAC creation since we handle it separately
+          rbac:
+            create: false
+          
+          # Webhook configuration (optional for auto-scaling)
+          githubWebhookServer:
+            enabled: true
+            port: 9443
+            useRunnerPodHooks: true
+            service:
+              type: ClusterIP
+              port: 443
+              targetPort: 9443
+          
+          # Log level
+          logLevel: info
+          
+          # Update strategy
+          strategy:
+            type: RollingUpdate
+            rollingUpdate:
+              maxUnavailable: 1
+              maxSurge: 1
+          
+          # Node selector for controller (optional)
+          nodeSelector: {}
+          
+          # Tolerations (optional)
+          tolerations: []
+          
+          # Affinity rules (optional)
+          affinity: {}
+
+    # Source 2: Runner configurations from Git repo
+    - repoURL: https://github.com/matthewmyrick/apollo-iac
+      path: kubernetes/integrations/github/runners/k8
+      targetRevision: main
+
   destination:
     server: https://kubernetes.default.svc
     namespace: github-runners
+    
   syncPolicy:
     automated:
       prune: true
@@ -27,11 +127,14 @@ spec:
       - CreateNamespace=true
       - PrunePropagationPolicy=foreground
       - PruneLast=true
+      - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:
         duration: 5s
         factor: 2
         maxDuration: 3m
+        
   revisionHistoryLimit: 10
+  
 status: {}

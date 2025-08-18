@@ -2,56 +2,160 @@
 
 This directory contains the configuration for deploying self-hosted GitHub Actions runners on your Apollo K3s cluster using the [Actions Runner Controller](https://github.com/actions-runner-controller/actions-runner-controller).
 
-## Overview
+## 🏗️ Architecture
 
-The setup includes:
-- **Runner Controller**: Manages the lifecycle of GitHub runners
-- **Runner Deployment**: Defines runner specifications and scaling
-- **Horizontal Autoscaler**: Automatically scales runners based on demand
-- **Security**: Proper RBAC and secrets management
-
-## Architecture
+The deployment is split into **3 separate components** for clarity and proper ordering:
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   GitHub.com    │    │  Runner Controller│    │ Runner Pods     │
-│                 │◄──►│  (Coordinator)    │◄──►│ (Actual Jobs)   │
-│ Workflow Queue  │    │                  │    │                 │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
+1. RBAC Resources → 2. Controller (Helm) → 3. Runner Instances
 ```
 
-## Quick Start
+## 📂 Directory Structure
 
-### 1. Create GitHub Personal Access Token
+```
+kubernetes/integrations/github/runners/
+├── README.md                     # This documentation
+├── deployment/                   # Master deployment script
+│   └── apply.sh                  # Deploys all 3 components in order
+├── rbac/                         # Step 1: RBAC Resources
+│   ├── deployment/
+│   │   ├── apply.sh             # Deploy RBAC only
+│   │   └── argocd.yaml          # RBAC ArgoCD Application
+│   └── k8/
+│       └── rbac.yaml            # ServiceAccount, Roles, Bindings
+├── controller/                   # Step 2: Controller Helm Chart
+│   └── deployment/
+│       ├── apply.sh             # Deploy controller only
+│       └── argocd.yaml          # Controller ArgoCD Application
+└── instances/                    # Step 3: Runner Instances
+    ├── deployment/
+    │   ├── apply.sh             # Deploy runners only
+    │   └── argocd.yaml          # Runners ArgoCD Application
+    └── k8/
+        ├── apollo-runner-deployment.yaml
+        ├── apollo-runner-autoscaler.yaml
+        └── github-token-secret.yaml
+```
 
-1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-2. Create a new token with these permissions:
+## 🚀 Quick Start (Automatic)
+
+### Option A: Deploy Everything at Once
+
+```bash
+# Set your GitHub token
+export GITHUB_TOKEN=your_github_token_here
+
+# Deploy all components in correct order
+cd deployment
+./apply.sh deploy
+```
+
+## 🔧 Manual Deployment (Step by Step)
+
+### Option B: Deploy Each Component Individually
+
+This is useful for troubleshooting or understanding the deployment process.
+
+#### Prerequisites
+
+1. **GitHub Personal Access Token** with these permissions:
    - `repo` (if using repository-level runners)
    - `admin:org` (if using organization-level runners)
    - `workflow`
 
-### 2. Set Environment Variable
+2. **Set environment variable:**
+   ```bash
+   export GITHUB_TOKEN=your_github_token_here
+   ```
+
+#### Step 1: Deploy RBAC Resources
 
 ```bash
-export GITHUB_TOKEN=your_github_token_here
-```
-
-### 3. Deploy Runners
-
-```bash
-# Deploy everything
+cd rbac/deployment
 ./apply.sh deploy
-
-# Check status
-./apply.sh status
-
-# Clean up (if needed)
-./apply.sh clean
 ```
 
-## Configuration
+**What this does:**
+- Creates ServiceAccount: `actions-runner-controller`
+- Creates ClusterRole and ClusterRoleBinding for controller permissions
+- Creates Role and RoleBinding for leader election
+- Creates viewer ClusterRole for read-only access
 
-### Runner Labels
+#### Step 2: Deploy Controller
+
+```bash
+cd ../controller/deployment
+./apply.sh deploy
+```
+
+**What this does:**
+- Installs Actions Runner Controller via Helm chart
+- Creates Custom Resource Definitions (CRDs)
+- Starts the controller deployment
+- Sets up webhook for auto-scaling
+
+**⏱️ Wait Time:** This step may take 2-3 minutes for the Helm chart to deploy.
+
+#### Step 3: Deploy Runner Instances
+
+```bash
+cd ../instances/deployment
+./apply.sh deploy
+```
+
+**What this does:**
+- Creates RunnerDeployment (defines runner specs)
+- Creates HorizontalRunnerAutoscaler (auto-scaling rules)
+- Starts actual runner pods
+
+## 📊 Monitoring and Status
+
+### Check Overall Status
+
+```bash
+# Check all ArgoCD applications
+kubectl get applications -n argocd | grep github
+
+# Check all resources in github-runners namespace
+kubectl get all -n github-runners
+
+# Check runners specifically
+kubectl get runners -n github-runners
+kubectl get runnerdeployments -n github-runners
+kubectl get hra -n github-runners
+```
+
+### Check Individual Components
+
+```bash
+# RBAC status
+cd rbac/deployment && ./apply.sh status
+
+# Controller status
+cd controller/deployment && ./apply.sh status
+
+# Runners status
+cd instances/deployment && ./apply.sh status
+```
+
+### Logs and Troubleshooting
+
+```bash
+# Controller logs
+kubectl logs -n github-runners deployment/gh-actions-runner-controller
+
+# Runner logs
+kubectl logs -n github-runners -l app=apollo-github-runners
+
+# ArgoCD application status
+kubectl describe application github-actions-rbac -n argocd
+kubectl describe application github-actions-controller -n argocd
+kubectl describe application github-actions-runners -n argocd
+```
+
+## 🏷️ Runner Configuration
+
+### Labels
 
 Your runners will be available with these labels:
 - `apollo` - Custom label for your infrastructure
@@ -84,7 +188,7 @@ jobs:
 - **Scale down**: When only 25% are busy
 - **Ephemeral**: Runners are recreated after each job for security
 
-## Resource Usage
+## 🔧 Resource Usage
 
 Each runner pod requests:
 - **CPU**: 500m (0.5 cores)
@@ -92,160 +196,93 @@ Each runner pod requests:
 - **Limits**: 2 CPU cores, 4Gi memory
 - **Storage**: 10Gi persistent work directory
 
-## Security Features
+## 🛡️ Security Features
 
 - **Ephemeral runners**: Fresh environment for each job
 - **Limited privileges**: Runs as non-root user
 - **Resource limits**: Prevents resource exhaustion
 - **Secret management**: GitHub token stored securely
 - **Network isolation**: Runs in dedicated namespace
+- **RBAC**: Proper role-based access control
 
-## Monitoring
+## 🗑️ Cleanup
 
-### Check Runner Status
+### Remove Everything
+
 ```bash
-# View all runners
-kubectl get runners -n github-runners
-
-# View runner deployments
-kubectl get runnerdeployments -n github-runners
-
-# View autoscaler status
-kubectl get hra -n github-runners
-
-# View runner logs
-kubectl logs -n github-runners -l app=apollo-github-runners
+cd deployment
+./apply.sh remove
 ```
 
-### ArgoCD Integration
-The runners are deployed via ArgoCD for GitOps management:
-- **Application**: `github-actions-runner-controller`
-- **Namespace**: `github-runners`
-- **Sync Policy**: Automated with self-healing
+### Remove Individual Components
 
-## File Structure
-
-```
-github-runners/
-├── README.md                          # This documentation
-├── apply.sh                           # Deployment script
-├── argocd.yaml                        # ArgoCD application for controller
-├── runners/
-│   ├── apollo-runner-deployment.yaml  # Runner deployment spec
-│   └── apollo-runner-autoscaler.yaml  # Horizontal autoscaler
-└── secrets/
-    └── github-token-secret.yaml       # Secret template
+```bash
+# Remove in reverse order
+cd instances/deployment && ./apply.sh remove
+cd ../controller/deployment && ./apply.sh remove
+cd ../rbac/deployment && ./apply.sh remove
 ```
 
-## Customization
-
-### Repository vs Organization Runners
-
-**Repository-level** (current setup):
-```yaml
-spec:
-  template:
-    spec:
-      repository: matthewmyrick/apollo-iac
-```
-
-**Organization-level**:
-```yaml
-spec:
-  template:
-    spec:
-      organization: your-org-name
-```
-
-### Custom Runner Image
-
-```yaml
-spec:
-  template:
-    spec:
-      image: your-registry/custom-runner:latest
-      # Add custom tools, dependencies, etc.
-```
-
-### Resource Adjustments
-
-```yaml
-spec:
-  template:
-    spec:
-      resources:
-        requests:
-          cpu: 1
-          memory: 2Gi
-        limits:
-          cpu: 4
-          memory: 8Gi
-```
-
-## Troubleshooting
+## ⚠️ Troubleshooting
 
 ### Common Issues
 
-1. **Runners not appearing in GitHub**
-   ```bash
-   # Check controller logs
-   kubectl logs -n github-runners deployment/actions-runner-controller
-   
-   # Verify GitHub token
-   kubectl get secret controller-manager -n github-runners -o yaml
-   ```
+1. **"Resource not found" errors**
+   - Ensure you deployed components in the correct order (RBAC → Controller → Runners)
+   - Check if CRDs are installed: `kubectl get crd | grep actions.summerwind.dev`
 
-2. **Pods stuck in pending**
-   ```bash
-   # Check node resources
-   kubectl describe nodes
-   
-   # Check storage class
-   kubectl get storageclass
-   ```
+2. **Runners not appearing in GitHub**
+   - Verify GitHub token: `kubectl get secret controller-manager -n github-runners -o yaml`
+   - Check controller logs: `kubectl logs -n github-runners deployment/gh-actions-runner-controller`
 
-3. **Authentication errors**
-   ```bash
-   # Recreate token secret
-   kubectl delete secret controller-manager -n github-runners
-   export GITHUB_TOKEN=new_token
-   ./apply.sh deploy
-   ```
+3. **Pods stuck in pending**
+   - Check node resources: `kubectl describe nodes`
+   - Verify storage class: `kubectl get storageclass`
 
-### Scaling Issues
+4. **Permission errors**
+   - Verify RBAC resources: `kubectl get clusterrole actions-runner-controller`
+   - Check ArgoCD project permissions for "integrations"
+
+### Manual Scaling
 
 ```bash
-# Manual scaling
+# Scale runners manually
 kubectl scale runnerdeployment apollo-github-runners --replicas=5 -n github-runners
 
-# Check autoscaler
+# Check autoscaler status
 kubectl describe hra apollo-runner-autoscaler -n github-runners
 ```
 
-## Integration with Existing Services
+## 🔗 Integration with Existing Services
 
 The runners can access other services in your cluster:
 - **Harbor**: `harbor-core.registry.svc.cluster.local`
 - **Vault**: `vault.vault.svc.cluster.local`
 - **ArgoCD**: `argocd-server.argocd.svc.cluster.local`
 
-## Security Considerations
-
-- Runners have Docker socket access (required for container builds)
-- Consider using rootless Docker for enhanced security
-- Monitor runner resource usage to prevent cluster impact
-- Regularly rotate GitHub tokens
-- Use secrets management for sensitive data in workflows
-
-## Port Information
-
-The GitHub runner controller uses these ports:
-- **Metrics**: 8080
-- **Webhook**: 9443 (for advanced scaling)
-- **Health**: 8081
+## 📈 Port Information
 
 Add to your `PORT_MAPPINGS.md`:
+
 | Service | Port | URL | Description |
 |---------|------|-----|-------------|
 | **Runner Controller Metrics** | 8080 | Internal only | Prometheus metrics |
 | **Runner Webhook** | 9443 | Internal only | GitHub webhook receiver |
+
+## 🔄 GitOps Integration
+
+All components are managed via ArgoCD for proper GitOps workflow:
+- **Applications**: 3 separate ArgoCD applications
+- **Project**: `integrations`
+- **Sync Policy**: Automated with self-healing
+- **Repository**: Uses your `apollo-iac` repository
+
+## 📋 Deployment Order Summary
+
+| Step | Component | Description | Command |
+|------|-----------|-------------|---------|
+| 1 | RBAC | ServiceAccount, Roles, Bindings | `rbac/deployment/apply.sh` |
+| 2 | Controller | Helm chart, CRDs, Controller pods | `controller/deployment/apply.sh` |
+| 3 | Runners | RunnerDeployment, Autoscaler, Runner pods | `instances/deployment/apply.sh` |
+
+**⚠️ Important:** Always deploy in this order. Each step depends on the previous one.

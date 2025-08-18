@@ -1,0 +1,40 @@
+# GitHub Runner Instances
+# Deploy this THIRD (after controller) to create actual runners
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: github-actions-runners
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: github-actions-runners
+    app.kubernetes.io/component: runners
+    project: integrations
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: integrations
+  source:
+    repoURL: https://github.com/matthewmyrick/apollo-iac
+    path: kubernetes/integrations/github/runners/instances/k8
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: github-runners
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10
+status: {}
