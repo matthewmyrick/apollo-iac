@@ -54,6 +54,9 @@ spec:
               environment: "home-lab"
               project: "apollo-iac"
           spec:
+            # Add host networking to access Tailscale
+            hostNetwork: true
+            dnsPolicy: ClusterFirstWithHostNet
             containers:
             - name: runner
               image: "ghcr.io/actions/actions-runner:latest"
@@ -64,6 +67,12 @@ spec:
                 limits:
                   cpu: "500m"
                   memory: "1Gi"
+              # Add environment variables for proxy if needed
+              env:
+              - name: https_proxy
+                value: ""  # Add your Tailscale exit node if using proxy
+              - name: http_proxy  
+                value: ""
         
         # Autoscaling behavior
         autoscaling:
