@@ -1,0 +1,23 @@
+name: Hello World 2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  hello-2:
+    runs-on: apollo-runners
+    
+    steps:
+    - name: Say Hello
+      run: |
+        echo "🎉 Hello World from apollo-runners!"
+        echo "Runner: $(hostname)"
+        echo "Date: $(date)"
+        echo "Testing connectivity..."
+        curl -s https://api.github.com > /dev/null && echo "✅ GitHub API accessible" || echo "❌ Cannot reach GitHub API"
+        echo "Sleeping for 30 seconds to see this running..."
+        sleep 30
+        echo "✅ Workflow completed successfully!"
