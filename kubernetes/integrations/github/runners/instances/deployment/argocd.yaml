@@ -52,10 +52,6 @@ spec:
             labels:
               environment: "home-lab"
               project: "apollo-iac"
-            annotations:
-              # Enable Tailscale networking for internet access
-              tailscale.com/expose: "false"  # Don't expose to Tailscale network, just use for egress
-              tailscale.com/tags: "tag:k8s,tag:github-runner"
           spec:
             # Use host networking to access internet via Tailscale
             hostNetwork: true
