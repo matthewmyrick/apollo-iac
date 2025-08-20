@@ -11,7 +11,7 @@ jobs:
     runs-on: apollo-runners
     
     steps:
-    - name: Say Hello
+    - name: Say Hello 2
       run: |
         echo "🎉 Hello World from apollo-runners!"
         echo "Runner: $(hostname)"
