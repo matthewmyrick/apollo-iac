@@ -33,6 +33,7 @@ spec:
         # Controller service account (required for proper discovery)
         controllerServiceAccount:
           name: "github-actions-controller-gha-rs-controller"
+          namespace: "github-runners"
         
         # Scaling configuration
         minRunners: 0
