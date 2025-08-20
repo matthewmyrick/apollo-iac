@@ -21,70 +21,24 @@ spec:
     targetRevision: 0.12.1  # Latest stable version
     helm:
       values: |
-        # GitHub Runner Scale Set Configuration
-        # Replace these values with your actual GitHub configuration
+        # Minimal GitHub Runner Scale Set Configuration per official docs
         
-        # Controller service account reference
-        controllerServiceAccount:
-          name: github-actions-controller-gha-rs-controller
-          namespace: github-runners
-        
-        # GitHub repository configuration (for repo-level runners)
-        githubConfigUrl: "https://github.com/matthewmyrick/apollo-iac"  # Point to specific repo
-        
-        # GitHub authentication - reference pre-existing secret
-        # The secret must exist in the same namespace with key: github_token
+        # GitHub repository configuration
+        githubConfigUrl: "https://github.com/matthewmyrick/apollo-iac"
         githubConfigSecret: github-runner-token
         
-        # Runner configuration - keep 1 runner always running
-        minRunners: 1
-        maxRunners: 5
-        
-        # Custom runner scale set name (this becomes a label)
+        # Runner scale set name (must match workflow runs-on label)
         runnerScaleSetName: "apollo-runners"
         
+        # Scaling configuration
+        minRunners: 0
+        maxRunners: 3
         
-        # Container mode - kubernetes mode (no Docker-in-Docker)
-        
-        # Runner template configuration
+        # Runner template - minimal configuration
         template:
-          metadata:
-            labels:
-              environment: "home-lab"
-              project: "apollo-iac"
           spec:
-            # Use host networking to access internet via Tailscale
             hostNetwork: true
             dnsPolicy: ClusterFirstWithHostNet
-            containers:
-            - name: runner
-              image: "ghcr.io/actions/actions-runner:2.319.1"
-              resources:
-                requests:
-                  cpu: "200m"
-                  memory: "512Mi"
-                limits:
-                  cpu: "1000m"
-                  memory: "2Gi"
-              # Environment variables (Tailscale handles routing automatically)
-              env: []
-        
-        # Autoscaling behavior
-        autoscaling:
-          scaleDownDelaySecondsAfterScaleOut: 300
-          scaleUpTriggers:
-          - github_webhook
-          - poll_interval
-        
-        # Logging
-        logging:
-          level: "info"
-        
-        # Listener metrics (required for v0.12.x)
-        listenerMetrics:
-          enabled: true
-          port: 8080
-          path: "/metrics"
   destination:
     server: https://kubernetes.default.svc
     namespace: github-runners
