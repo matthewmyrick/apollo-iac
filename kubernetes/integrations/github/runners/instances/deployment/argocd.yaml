@@ -57,8 +57,9 @@ spec:
               tailscale.com/expose: "false"  # Don't expose to Tailscale network, just use for egress
               tailscale.com/tags: "tag:k8s,tag:github-runner"
           spec:
-            # Use cluster networking (internet via Tailscale exit node on host)
-            hostNetwork: false
+            # Use host networking to access internet via Tailscale
+            hostNetwork: true
+            dnsPolicy: ClusterFirstWithHostNet
             containers:
             - name: runner
               image: "ghcr.io/actions/actions-runner:latest"
