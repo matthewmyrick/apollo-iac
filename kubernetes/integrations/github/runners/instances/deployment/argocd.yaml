@@ -18,7 +18,7 @@ spec:
   source:
     repoURL: ghcr.io/actions/actions-runner-controller-charts
     chart: gha-runner-scale-set
-    targetRevision: 0.9.0   # Version reported working by users
+    targetRevision: 0.12.1  # Latest stable version
     helm:
       values: |
         # GitHub Runner Scale Set Configuration
@@ -58,7 +58,7 @@ spec:
             dnsPolicy: ClusterFirstWithHostNet
             containers:
             - name: runner
-              image: "ghcr.io/actions/actions-runner:latest"
+              image: "ghcr.io/actions/actions-runner:2.319.1"
               resources:
                 requests:
                   cpu: "200m"
@@ -79,6 +79,12 @@ spec:
         # Logging
         logging:
           level: "info"
+        
+        # Listener metrics (required for v0.12.x)
+        listenerMetrics:
+          enabled: true
+          port: 8080
+          path: "/metrics"
   destination:
     server: https://kubernetes.default.svc
     namespace: github-runners
