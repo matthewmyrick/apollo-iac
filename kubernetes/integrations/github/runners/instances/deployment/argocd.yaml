@@ -36,8 +36,8 @@ spec:
         # The secret must exist in the same namespace with key: github_token
         githubConfigSecret: github-runner-token
         
-        # Runner configuration
-        minRunners: 0
+        # Runner configuration - keep 1 runner always running
+        minRunners: 1
         maxRunners: 5
         
         # Custom runner scale set name (this becomes a label)
