@@ -39,6 +39,14 @@ spec:
           spec:
             hostNetwork: true
             dnsPolicy: ClusterFirstWithHostNet
+            # Runner labels for targeting workflows
+            # Note: The runnerScaleSetName above is automatically added as a label
+            labels:
+              - self-hosted
+              - apollo
+              - k3s
+              - linux
+              - x64
   destination:
     server: https://kubernetes.default.svc
     namespace: github-runners

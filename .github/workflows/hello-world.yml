@@ -8,7 +8,7 @@ on:
 
 jobs:
   hello:
-    runs-on: apollo-runners
+    runs-on: self-hosted
     
     steps:
     - name: Say Hello
