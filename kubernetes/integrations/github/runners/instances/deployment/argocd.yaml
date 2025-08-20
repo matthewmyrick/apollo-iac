@@ -44,9 +44,7 @@ spec:
         runnerScaleSetName: "apollo-runners"
         
         
-        # Container mode for Docker support
-        containerMode:
-          type: "dind"  # Docker-in-Docker support
+        # Container mode - kubernetes mode (no Docker-in-Docker)
         
         # Runner template configuration
         template:
