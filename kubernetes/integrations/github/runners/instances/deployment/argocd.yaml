@@ -43,11 +43,6 @@ spec:
         # Custom runner scale set name (this becomes a label)
         runnerScaleSetName: "apollo-runners"
         
-        # Listener pod configuration - needs network access to GitHub
-        listenerTemplate:
-          spec:
-            hostNetwork: true
-            dnsPolicy: ClusterFirstWithHostNet
         
         # Container mode for Docker support
         containerMode:
