@@ -30,6 +30,10 @@ spec:
         # Runner scale set name (must match workflow runs-on label)
         runnerScaleSetName: "apollo-runners"
         
+        # Controller service account (required for proper discovery)
+        controllerServiceAccount:
+          name: "github-actions-controller-gha-rs-controller"
+        
         # Scaling configuration
         minRunners: 0
         maxRunners: 3
