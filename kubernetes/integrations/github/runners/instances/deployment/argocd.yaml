@@ -61,11 +61,11 @@ spec:
               image: "ghcr.io/actions/actions-runner:latest"
               resources:
                 requests:
-                  cpu: "100m"
-                  memory: "256Mi"
+                  cpu: "200m"
+                  memory: "512Mi"
                 limits:
-                  cpu: "500m"
-                  memory: "1Gi"
+                  cpu: "1000m"
+                  memory: "2Gi"
               # Environment variables (Tailscale handles routing automatically)
               env: []
         
