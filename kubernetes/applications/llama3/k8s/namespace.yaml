@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: llama3
+  labels:
+    app.kubernetes.io/name: llama3
+    app.kubernetes.io/component: ai-model
