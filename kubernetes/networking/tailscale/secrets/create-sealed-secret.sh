@@ -13,20 +13,20 @@ log_info() { echo -e "${BLUE}ℹ️  ${NC}${1}"; }
 log_success() { echo -e "${GREEN}✅ ${NC}${1}"; }
 log_error() { echo -e "${RED}❌ ${NC}${1}"; }
 
-# Check if client_id is provided
-if [[ -z "$1" ]]; then
-    log_error "Usage: $0 <client_id>"
+# Check if client_id and client_secret are provided
+if [[ -z "$1" ]] || [[ -z "$2" ]]; then
+    log_error "Usage: $0 <client_id> <client_secret>"
     echo ""
-    echo "Get your OAuth client_id from:"
+    echo "Get your OAuth credentials from:"
     echo "https://login.tailscale.com/admin/settings/oauth"
     echo ""
     echo "Example:"
-    echo "  $0 k123abc..."
+    echo "  $0 k123abc... tskey-client-..."
     exit 1
 fi
 
 CLIENT_ID="$1"
-CLIENT_SECRET="***REMOVED_SECRET***"
+CLIENT_SECRET="$2"
 NAMESPACE="tailscale-operator"
 SECRET_NAME="operator-oauth"
 
