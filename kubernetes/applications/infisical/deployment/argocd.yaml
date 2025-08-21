@@ -1,0 +1,105 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infisical
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: infisical
+    app.kubernetes.io/component: secrets-management
+    project: storage
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: storage
+  source:
+    repoURL: https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/
+    chart: infisical
+    targetRevision: 0.4.2  # Use the main infisical chart
+    helm:
+      values: |
+        # Infisical configuration for Apollo home lab
+        
+        # Service configuration for NodePort access
+        infisical:
+          service:
+            type: NodePort
+            nodePort: 30500
+          
+          # Database configuration - use MongoDB as expected
+          env:
+            - name: DB_CONNECTION_URI
+              value: "mongodb://infisical-mongodb:27017/infisical"
+            - name: REDIS_URL  
+              value: "redis://infisical-redis:6379"
+            - name: ENCRYPTION_KEY
+              value: "your-32-character-encryption-key-here"
+            - name: JWT_SIGNUP_SECRET
+              value: "your-jwt-signup-secret"
+            - name: JWT_REFRESH_SECRET
+              value: "your-jwt-refresh-secret"
+            - name: JWT_AUTH_SECRET
+              value: "your-jwt-auth-secret"
+            - name: JWT_SERVICE_SECRET
+              value: "your-jwt-service-secret"
+            - name: NODE_ENV
+              value: "production"
+          
+          # Resource limits for home lab
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+        
+        # MongoDB configuration (Infisical uses MongoDB by default)
+        mongodb:
+          enabled: true
+          auth:
+            enabled: false  # Simplified for home lab
+          persistence:
+            enabled: true
+            storageClass: "local-path"
+            size: 8Gi
+        
+        # Redis configuration
+        redis:
+          enabled: true
+          auth:
+            enabled: false
+          master:
+            persistence:
+              enabled: true
+              storageClass: "local-path"
+              size: 2Gi
+        
+        # Disable PostgreSQL since we use MongoDB
+        postgresql:
+          enabled: false
+        
+        # Disable ingress since we use NodePort
+        ingress:
+          enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: infisical
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  revisionHistoryLimit: 10

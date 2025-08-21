@@ -68,40 +68,28 @@ check_tailscale_auth() {
 create_tailscale_secret() {
   log_step "Creating Tailscale authentication secret"
   
-  log_warning "You need a Tailscale OAuth client for the operator."
-  echo ""
-  echo "To create one:"
-  echo "1. Go to: https://login.tailscale.com/admin/settings/oauth"
-  echo "2. Generate a new OAuth client"
-  echo "3. Set these scopes:"
-  echo "   - devices (to manage devices)"
-  echo "   - all (or specific device access)"
-  echo "4. Copy the OAuth secret"
-  echo ""
-  
-  if [[ -z "$TAILSCALE_OAUTH_SECRET" ]]; then
-    log_warning "TAILSCALE_OAUTH_SECRET environment variable not set"
-    echo "Please set it and rerun:"
-    echo "  export TAILSCALE_OAUTH_SECRET='tskey-api-xxxxx'"
-    echo "  $0"
-    exit 1
-  fi
-  
   # Create namespace first
   kubectl create namespace tailscale-operator --dry-run=client -o yaml | kubectl apply -f -
   
-  # Create both OAuth secrets (Helm chart expects operator-oauth, but we also keep tailscale for consistency)
-  kubectl create secret generic operator-oauth \
-    --namespace=tailscale-operator \
-    --from-literal=client_secret="$TAILSCALE_OAUTH_SECRET" \
-    --dry-run=client -o yaml | kubectl apply -f -
-    
-  kubectl create secret generic tailscale \
-    --namespace=tailscale-operator \
-    --from-literal=client_secret="$TAILSCALE_OAUTH_SECRET" \
-    --dry-run=client -o yaml | kubectl apply -f -
-    
-  log_success "Tailscale OAuth secret created"
+  # Check if sealed secret exists
+  SEALED_SECRET_FILE="${SCRIPT_DIR}/../secrets/tailscale-oauth-sealedsecret.yaml"
+  
+  if [[ -f "$SEALED_SECRET_FILE" ]]; then
+    log_info "Applying sealed secret for OAuth credentials"
+    kubectl apply -f "$SEALED_SECRET_FILE"
+    log_success "Sealed secret applied"
+  else
+    log_warning "No sealed secret found. You need to create OAuth credentials."
+    echo ""
+    echo "To create sealed secret:"
+    echo "1. Go to: https://login.tailscale.com/admin/settings/oauth"
+    echo "2. Generate a new OAuth client with scopes: devices, all"
+    echo "3. Copy the client_id (NOT the secret - that's already configured)"
+    echo "4. Run: ${SCRIPT_DIR}/../secrets/create-sealed-secret.sh YOUR_CLIENT_ID"
+    echo "5. Run this script again"
+    echo ""
+    exit 1
+  fi
 }
 
 deploy_networking_project() {

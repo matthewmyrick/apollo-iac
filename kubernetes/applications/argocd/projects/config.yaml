@@ -130,6 +130,8 @@ spec:
   - "https://helm.twun.io"  # Harbor Helm repository
   - "https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner"
   - "https://docker.github.io/distribution-charts"  # Docker Registry
+  - "https://bitnami-labs.github.io/sealed-secrets"  # Sealed Secrets
+  - "https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/"  # Infisical
   - "*"
   
   destinations:
@@ -140,6 +142,8 @@ spec:
   - namespace: "persistent-storage"
     server: "https://kubernetes.default.svc"
   - namespace: "vault"
+    server: "https://kubernetes.default.svc"
+  - namespace: "infisical"
     server: "https://kubernetes.default.svc"
   - namespace: "default"
     server: "https://kubernetes.default.svc"
@@ -165,20 +169,28 @@ spec:
     kind: "ClusterRoleBinding"
   - group: "apiextensions.k8s.io"
     kind: "CustomResourceDefinition"
+  - group: "networking.k8s.io"
+    kind: "IngressClass"
+  - group: "admissionregistration.k8s.io"
+    kind: "ValidatingWebhookConfiguration"
+  - group: "admissionregistration.k8s.io"
+    kind: "MutatingWebhookConfiguration"
   
   namespaceResourceWhitelist:
   - group: ""
     kind: "*"
   - group: "apps"
     kind: "*"
+  - group: "batch"
+    kind: "*"
   - group: "storage.k8s.io"
     kind: "*"
   - group: "networking.k8s.io"
     kind: "*"
   - group: "rbac.authorization.k8s.io"
-    kind: "RoleBinding"
-  - group: "rbac.authorization.k8s.io"
-    kind: "Role"
+    kind: "*"
+  - group: "admissionregistration.k8s.io"
+    kind: "*"
   
   roles:
   - name: admin
