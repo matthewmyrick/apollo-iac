@@ -1,0 +1,92 @@
+# GitHub Actions Runners for Portfolio Site
+# This requires the Actions Runner Controller to be deployed first (sync-wave: 1)
+
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: portfolio-github-runners
+  namespace: github-runners
+  labels:
+    app: portfolio-github-runners
+    env: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"  # Deploy after controller
+spec:
+  # Number of runner replicas
+  replicas: 1
+  
+  template:
+    spec:
+      # Repository for portfolio site
+      repository: matthewmyrick/portfolio-site
+      
+      # Runner image configuration
+      image: summerwind/actions-runner:latest
+      imagePullPolicy: Always
+      
+      # Labels to assign to the runners (used for targeting in workflows)
+      labels:
+        - apollo-runners
+        - portfolio
+        - self-hosted
+        - k3s
+        - linux
+        - x64
+      
+      # Resource limits and requests
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 2
+          memory: 4Gi
+      
+      # Storage for runner work directory
+      volumeMounts:
+        - name: work
+          mountPath: /runner/_work
+        - name: docker-sock
+          mountPath: /var/run/docker.sock
+          readOnly: false
+      
+      volumes:
+        - name: work
+          emptyDir: {}
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+      
+      # Security context
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 121  # docker group
+        fsGroup: 121
+      
+      # Node selector (optional - run on specific nodes)
+      nodeSelector: {}
+      
+      # Tolerations (optional - allow scheduling on tainted nodes)
+      tolerations: []
+      
+      # Environment variables
+      env:
+        - name: RUNNER_FEATURE_FLAG_ONCE
+          value: "true"
+        - name: DISABLE_RUNNER_UPDATE
+          value: "true"
+        - name: RUNNER_WORKDIR
+          value: "/runner/_work"
+      
+      # Ephemeral runners (recommended for security)
+      ephemeral: true
+      
+      # Runner timeout
+      workVolumeClaimTemplate:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: local-path

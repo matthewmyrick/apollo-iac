@@ -6,8 +6,27 @@ echo "=========================================="
 echo "06 - k3s Kubernetes Setup"
 echo "=========================================="
 
-# Install k3s
-echo "Installing k3s Kubernetes..."
+# Install k3s with custom configuration
+echo "Installing k3s Kubernetes with increased resource limits..."
+
+# Create k3s config directory
+sudo mkdir -p /etc/rancher/k3s
+
+# Create k3s configuration file with high-capacity resource limits
+sudo tee /etc/rancher/k3s/config.yaml > /dev/null <<EOF
+# K3s server configuration for maximum resource allocation
+kubelet-arg:
+  - "max-pods=220"
+  - "kube-reserved=cpu=0m,memory=64Mi"
+  - "system-reserved=cpu=0m,memory=64Mi"
+  - "eviction-hard=memory.available<64Mi"
+  - "feature-gates=SizeMemoryBackedVolumes=true"
+kube-apiserver-arg:
+  - "max-requests-inflight=400"
+  - "max-mutating-requests-inflight=200"
+EOF
+
+# Install k3s with configuration
 curl -sfL https://get.k3s.io | sh -
 
 # Wait for k3s to be ready
@@ -20,6 +39,9 @@ sleep 30
 
 # Set up kubeconfig permissions
 sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+
+# Ensure kubeconfig is accessible for the current user
+echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> ~/.bashrc
 
 # Set KUBECONFIG for Tailscale operator installation
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml

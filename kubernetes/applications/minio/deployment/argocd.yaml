@@ -1,0 +1,117 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/component: object-storage
+    project: storage
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: storage
+  source:
+    repoURL: https://charts.min.io/
+    chart: minio
+    targetRevision: 5.2.0  # Latest stable version
+    helm:
+      values: |
+        # MinIO configuration for Apollo home lab
+        
+        # Deployment mode - standalone for home lab
+        mode: standalone
+        
+        # Root user credentials (will be created as secret)
+        rootUser: admin
+        rootPassword: Apollo-MinIO-2024!
+        
+        # Resources for home lab
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 100m
+          limits:
+            memory: 1Gi
+            cpu: 500m
+        
+        # Persistence configuration
+        persistence:
+          enabled: true
+          storageClass: "local-path"
+          size: 50Gi
+          
+        # Service configuration for NodePort access
+        service:
+          type: NodePort
+          port: 9000
+          nodePort: 30900
+          
+        # Console service (MinIO web UI)
+        consoleService:
+          type: NodePort
+          port: 9001
+          nodePort: 30901
+          
+        # Security context
+        securityContext:
+          enabled: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          fsGroup: 1000
+          
+        # Environment variables
+        environment:
+          MINIO_PROMETHEUS_AUTH_TYPE: "public"
+          MINIO_UPDATE: "off"
+          
+        # Ingress disabled - using NodePort
+        ingress:
+          enabled: false
+          
+        consoleIngress:
+          enabled: false
+          
+        # Metrics for monitoring (optional)
+        metrics:
+          serviceMonitor:
+            enabled: false
+            
+        # Buckets to create automatically
+        buckets:
+          - name: apollo-backups
+            policy: none
+            purge: false
+          - name: apollo-media
+            policy: none  
+            purge: false
+          - name: apollo-logs
+            policy: none
+            purge: false
+            
+        # Additional environment for bucket creation
+        extraEnvs:
+          - name: MINIO_BROWSER_REDIRECT_URL
+            value: "http://home.apollo.io:30901"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  revisionHistoryLimit: 10

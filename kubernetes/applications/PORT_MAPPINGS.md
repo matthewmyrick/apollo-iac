@@ -9,8 +9,8 @@ All services are accessible via `home.apollo.io` with their respective ports:
 | **Harbor Registry** | 30003 | http://home.apollo.io:30003 | Container registry for Docker images |
 | **ArgoCD** | 30969 | http://home.apollo.io:30969 | GitOps continuous delivery tool |
 | **Infisical** | 30500 | http://home.apollo.io:30500 | Modern secret management platform |
-| **Vault UI** | 30201 | http://home.apollo.io:30201 | HashiCorp Vault web interface |
-| **Vault API** | 30200 | http://home.apollo.io:30200 | HashiCorp Vault API endpoint |
+| **MinIO Console** | 30901 | http://home.apollo.io:30901 | S3-compatible object storage web UI |
+| **MinIO API** | 30900 | http://home.apollo.io:30900 | S3-compatible object storage API |
 
 ## Default Credentials
 
@@ -26,11 +26,19 @@ All services are accessible via `home.apollo.io` with their respective ports:
   ```
 
 ### Infisical
+- **Secret Management Platform**
 - Create account via web UI on first visit
 - No default credentials - admin account setup required
+- Uses PostgreSQL backend with sealed secrets
+- Access at: http://home.apollo.io:30500
 
-### Vault
-- Initial root token available after initialization
+### MinIO
+- **S3-Compatible Object Storage**
+- Username: admin
+- Password: Apollo-MinIO-2024!
+- Console UI: http://home.apollo.io:30901
+- S3 API Endpoint: http://home.apollo.io:30900
+- Default buckets: apollo-backups, apollo-media, apollo-logs
 
 ## Service Status Check
 
@@ -49,9 +57,9 @@ kubectl get svc -n argocd
 kubectl get pods -n infisical
 kubectl get svc -n infisical
 
-# Vault
-kubectl get pods -n vault
-kubectl get svc -n vault
+# MinIO
+kubectl get pods -n minio
+kubectl get svc -n minio
 ```
 
 ## Port Range Information
@@ -84,14 +92,15 @@ open http://home.apollo.io:30969
 # Open Infisical in browser
 open http://home.apollo.io:30500
 
-# Open Vault UI in browser
-open http://home.apollo.io:30201
+# Open MinIO Console in browser
+open http://home.apollo.io:30901
 
 # Test connectivity
 curl -I http://home.apollo.io:30003  # Harbor
 curl -I http://home.apollo.io:30969  # ArgoCD
 curl -I http://home.apollo.io:30500  # Infisical
-curl -I http://home.apollo.io:30201  # Vault UI
+curl -I http://home.apollo.io:30901  # MinIO Console
+curl -I http://home.apollo.io:30900  # MinIO API
 ```
 
 ## Browser Security Configuration
@@ -104,12 +113,12 @@ Since these services run on HTTP (not HTTPS), browsers will show security warnin
 ```bash
 # Launch Chrome with security exceptions for Apollo services
 /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
-  --unsafely-treat-insecure-origin-as-secure="http://home.apollo.io:30003,http://home.apollo.io:30969,http://home.apollo.io:30500,http://home.apollo.io:30201,http://home.apollo.io:30200"
+  --unsafely-treat-insecure-origin-as-secure="http://home.apollo.io:30003,http://home.apollo.io:30969,http://home.apollo.io:30500,http://home.apollo.io:30900,http://home.apollo.io:30901"
 ```
 
 **Method 2: Chrome Flags (Persistent)**
 1. Navigate to: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
-2. Add these origins: `http://home.apollo.io:30003,http://home.apollo.io:30969,http://home.apollo.io:30500,http://home.apollo.io:30201,http://home.apollo.io:30200`
+2. Add these origins: `http://home.apollo.io:30003,http://home.apollo.io:30969,http://home.apollo.io:30500,http://home.apollo.io:30900,http://home.apollo.io:30901`
 3. Click "Enable" and restart Chrome
 
 ### Firefox
@@ -148,12 +157,12 @@ Since these services run on HTTP (not HTTPS), browsers will show security warnin
 ```bash
 # Launch Edge with security exceptions
 /Applications/Microsoft\ Edge.app/Contents/MacOS/Microsoft\ Edge \
-  --unsafely-treat-insecure-origin-as-secure="http://home.apollo.io:30003,http://home.apollo.io:30969,http://home.apollo.io:30500,http://home.apollo.io:30201,http://home.apollo.io:30200"
+  --unsafely-treat-insecure-origin-as-secure="http://home.apollo.io:30003,http://home.apollo.io:30969,http://home.apollo.io:30500,http://home.apollo.io:30900,http://home.apollo.io:30901"
 ```
 
 **Method 2: Edge Flags (Persistent)**
 1. Navigate to: `edge://flags/#unsafely-treat-insecure-origin-as-secure`
-2. Add these origins: `http://home.apollo.io:30003,http://home.apollo.io:30969,http://home.apollo.io:30500,http://home.apollo.io:30201,http://home.apollo.io:30200`
+2. Add these origins: `http://home.apollo.io:30003,http://home.apollo.io:30969,http://home.apollo.io:30500,http://home.apollo.io:30900,http://home.apollo.io:30901`
 3. Click "Enable" and restart Edge
 
 ### Zen Browser

@@ -13,36 +13,26 @@ spec:
   project: storage
   source:
     repoURL: https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/
-    chart: infisical
-    targetRevision: 0.4.2  # Use the main infisical chart
+    chart: infisical-standalone
+    targetRevision: 1.6.1  # Use the standalone chart with PostgreSQL support
     helm:
       values: |
-        # Infisical configuration for Apollo home lab
+        # Infisical standalone configuration for Apollo home lab
         
-        # Service configuration for NodePort access
         infisical:
+          enabled: true
+          replicaCount: 2
+          
+          # Use PostgreSQL version of Infisical
+          image:
+            repository: infisical/infisical
+            tag: "v0.93.1-postgres"
+            pullPolicy: IfNotPresent
+          
+          # Service configuration for NodePort access
           service:
             type: NodePort
-            nodePort: 30500
-          
-          # Database configuration - use MongoDB as expected
-          env:
-            - name: DB_CONNECTION_URI
-              value: "mongodb://infisical-mongodb:27017/infisical"
-            - name: REDIS_URL  
-              value: "redis://infisical-redis:6379"
-            - name: ENCRYPTION_KEY
-              value: "your-32-character-encryption-key-here"
-            - name: JWT_SIGNUP_SECRET
-              value: "your-jwt-signup-secret"
-            - name: JWT_REFRESH_SECRET
-              value: "your-jwt-refresh-secret"
-            - name: JWT_AUTH_SECRET
-              value: "your-jwt-auth-secret"
-            - name: JWT_SERVICE_SECRET
-              value: "your-jwt-service-secret"
-            - name: NODE_ENV
-              value: "production"
+            nodePort: "30500"
           
           # Resource limits for home lab
           resources:
@@ -53,17 +43,21 @@ spec:
               cpu: 500m
               memory: 1Gi
         
-        # MongoDB configuration (Infisical uses MongoDB by default)
-        mongodb:
+        # PostgreSQL configuration
+        postgresql:
           enabled: true
           auth:
-            enabled: false  # Simplified for home lab
-          persistence:
-            enabled: true
-            storageClass: "local-path"
-            size: 8Gi
+            username: infisical
+            password: infisical
+            database: infisical
+            postgresPassword: postgres-admin-password
+          primary:
+            persistence:
+              enabled: true
+              storageClass: "local-path"
+              size: 8Gi
         
-        # Redis configuration
+        # Redis configuration  
         redis:
           enabled: true
           auth:
@@ -73,10 +67,6 @@ spec:
               enabled: true
               storageClass: "local-path"
               size: 2Gi
-        
-        # Disable PostgreSQL since we use MongoDB
-        postgresql:
-          enabled: false
         
         # Disable ingress since we use NodePort
         ingress:

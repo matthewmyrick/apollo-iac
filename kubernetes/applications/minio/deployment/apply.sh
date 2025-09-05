@@ -21,8 +21,8 @@ log_step() { echo -e "\n${PURPLE}▶ ${BOLD}${1}${NC}"; }
 print_banner() {
   echo -e "${CYAN}"
   echo "╔═══════════════════════════════════════════════════════╗"
-  echo "║              Infisical Secrets Manager                ║"
-  echo "║          Official Helm Chart Deployment              ║"
+  echo "║                   MinIO Object Storage                ║"
+  echo "║              S3-Compatible Blob Storage               ║"
   echo "╚═══════════════════════════════════════════════════════╝"
   echo -e "${NC}\n"
 }
@@ -53,18 +53,18 @@ check_prerequisites() {
 }
 
 setup_helm_repository() {
-  log_step "Setting up Infisical Helm repository"
+  log_step "Setting up MinIO Helm repository"
   
   if command -v helm &> /dev/null; then
-    log_info "Adding Infisical helm repository..."
-    helm repo add infisical 'https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/' 2>/dev/null || true
+    log_info "Adding MinIO helm repository..."
+    helm repo add minio https://charts.min.io/ 2>/dev/null || true
     log_success "Helm repository configured"
     
     log_info "Updating helm repositories..."
-    helm repo update infisical 2>/dev/null || log_warning "Failed to update helm repos"
+    helm repo update minio 2>/dev/null || log_warning "Failed to update helm repos"
     
-    log_info "Available Infisical charts:"
-    helm search repo infisical/infisical --versions | head -5 2>/dev/null || log_info "Could not list charts"
+    log_info "Available MinIO charts:"
+    helm search repo minio/minio --versions | head -5 2>/dev/null || log_info "Could not list charts"
   else
     log_info "Helm not available, skipping repository setup (ArgoCD will handle this)"
   fi
@@ -86,7 +86,7 @@ check_storage_project() {
 }
 
 deploy_namespace() {
-  log_step "Creating Infisical namespace"
+  log_step "Creating MinIO namespace"
   
   if [[ ! -f "$NAMESPACE_FILE" ]]; then
     log_error "Namespace file not found: $NAMESPACE_FILE"
@@ -95,25 +95,10 @@ deploy_namespace() {
   
   kubectl apply -f "$NAMESPACE_FILE"
   log_success "Namespace created"
-  
-  # Apply sealed secrets if they exist
-  POSTGRES_SEALED_SECRET="${SCRIPT_DIR}/postgresql-sealed-secret.yaml"
-  if [[ -f "$POSTGRES_SEALED_SECRET" ]]; then
-    log_info "Applying PostgreSQL sealed secret..."
-    kubectl apply -f "$POSTGRES_SEALED_SECRET"
-    log_success "PostgreSQL sealed secret applied"
-  fi
-  
-  INFISICAL_SEALED_SECRET="${SCRIPT_DIR}/infisical-sealed-secrets.yaml"
-  if [[ -f "$INFISICAL_SEALED_SECRET" ]]; then
-    log_info "Applying Infisical sealed secrets..."
-    kubectl apply -f "$INFISICAL_SEALED_SECRET"
-    log_success "Infisical sealed secrets applied"
-  fi
 }
 
-deploy_infisical() {
-  log_step "Deploying Infisical via ArgoCD"
+deploy_minio() {
+  log_step "Deploying MinIO via ArgoCD"
   
   if [[ ! -f "$ARGOCD_FILE" ]]; then
     log_error "ArgoCD application file not found: $ARGOCD_FILE"
@@ -123,56 +108,66 @@ deploy_infisical() {
   kubectl apply -f "$ARGOCD_FILE"
   
   if [[ $? -eq 0 ]]; then
-    log_success "Infisical ArgoCD application applied successfully"
+    log_success "MinIO ArgoCD application applied successfully"
     log_info "Waiting for application to sync..."
     
     # Give it time to sync
     sleep 10
   else
-    log_error "Failed to apply Infisical application"
+    log_error "Failed to apply MinIO application"
     exit 1
   fi
 }
 
 show_status() {
-  log_step "Infisical Status"
+  log_step "MinIO Status"
   
   echo -e "${BLUE}ArgoCD Application:${NC}"
-  kubectl get application infisical -n argocd -o wide 2>/dev/null || log_warning "Application not found"
+  kubectl get application minio -n argocd -o wide 2>/dev/null || log_warning "Application not found"
   echo ""
   
-  echo -e "${BLUE}Infisical Pods:${NC}"
-  kubectl get pods -n infisical 2>/dev/null || log_info "No pods yet"
+  echo -e "${BLUE}MinIO Pods:${NC}"
+  kubectl get pods -n minio 2>/dev/null || log_info "No pods yet"
   echo ""
   
-  echo -e "${BLUE}Infisical Services:${NC}"
-  kubectl get services -n infisical 2>/dev/null || log_info "Services not created yet"
+  echo -e "${BLUE}MinIO Services:${NC}"
+  kubectl get services -n minio 2>/dev/null || log_info "Services not created yet"
 }
 
 show_access_info() {
   log_step "Access Information"
   
   echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
-  echo -e "${GREEN}      Infisical Deployment Started! 🔐${NC}"
+  echo -e "${GREEN}      MinIO Object Storage Deployment Started! 🗄️${NC}"
   echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
   echo ""
   
-  echo -e "${BLUE}Access Infisical UI:${NC}"
-  echo "URL: http://home.apollo.io:30500"
-  echo "Alternative: kubectl port-forward -n infisical svc/infisical-frontend 8080:3000"
+  echo -e "${BLUE}Access MinIO:${NC}"
+  echo "Console UI: http://home.apollo.io:30901"
+  echo "S3 API:     http://home.apollo.io:30900"
   echo ""
   
-  echo -e "${BLUE}First Steps:${NC}"
-  echo "1. Wait for all pods to be ready (may take a few minutes)"
-  echo "2. Access the web UI to create your first admin account"
-  echo "3. Create an organization and project"
-  echo "4. Start managing your secrets!"
+  echo -e "${BLUE}Default Credentials:${NC}"
+  echo "Username: admin"
+  echo "Password: Apollo-MinIO-2024!"
+  echo ""
+  
+  echo -e "${BLUE}Default Buckets:${NC}"
+  echo "• apollo-backups - For system backups"
+  echo "• apollo-media   - For media files"  
+  echo "• apollo-logs    - For log storage"
+  echo ""
+  
+  echo -e "${BLUE}S3 Endpoint Configuration:${NC}"
+  echo "Endpoint: http://home.apollo.io:30900"
+  echo "Region:   us-east-1 (default)"
+  echo "SSL:      false (development setup)"
   echo ""
   
   echo -e "${BLUE}Monitor Deployment:${NC}"
-  echo "  kubectl get pods -n infisical --watch"
-  echo "  kubectl logs -n infisical deployment/infisical-backend"
-  echo "  kubectl get application infisical -n argocd"
+  echo "  kubectl get pods -n minio --watch"
+  echo "  kubectl logs -n minio deployment/minio"
+  echo "  kubectl get application minio -n argocd"
 }
 
 # Main execution
@@ -184,7 +179,7 @@ case "${1:-deploy}" in
     setup_helm_repository
     check_storage_project
     deploy_namespace
-    deploy_infisical
+    deploy_minio
     show_status
     show_access_info
     ;;
@@ -194,17 +189,17 @@ case "${1:-deploy}" in
     ;;
     
   remove)
-    log_warning "Removing Infisical..."
+    log_warning "Removing MinIO..."
     kubectl delete -f "$ARGOCD_FILE" --ignore-not-found=true
-    kubectl delete namespace infisical --ignore-not-found=true
-    log_success "Infisical application removed"
+    kubectl delete namespace minio --ignore-not-found=true
+    log_success "MinIO application removed"
     ;;
     
   *)
     echo "Usage: $0 [deploy|status|remove]"
-    echo "  deploy - Deploy Infisical (default)"
+    echo "  deploy - Deploy MinIO (default)"
     echo "  status - Show current status"
-    echo "  remove - Remove Infisical"
+    echo "  remove - Remove MinIO"
     exit 1
     ;;
 esac

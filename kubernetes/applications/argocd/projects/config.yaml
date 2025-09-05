@@ -132,6 +132,7 @@ spec:
   - "https://docker.github.io/distribution-charts"  # Docker Registry
   - "https://bitnami-labs.github.io/sealed-secrets"  # Sealed Secrets
   - "https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/"  # Infisical
+  - "https://charts.min.io/"  # MinIO Helm repository
   - "*"
   
   destinations:
@@ -144,6 +145,8 @@ spec:
   - namespace: "vault"
     server: "https://kubernetes.default.svc"
   - namespace: "infisical"
+    server: "https://kubernetes.default.svc"
+  - namespace: "minio"
     server: "https://kubernetes.default.svc"
   - namespace: "default"
     server: "https://kubernetes.default.svc"

@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: github-runners-portfolio
+  namespace: argocd
+  labels:
+    app: github-runners-portfolio
+    env: production
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/matthewmyrick/apollo-iac.git
+    targetRevision: HEAD
+    path: kubernetes/integrations/github/runners/instances/portfolio/k8
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: github-runners
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m0s
+  
+  revisionHistoryLimit: 3
