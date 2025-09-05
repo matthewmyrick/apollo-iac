@@ -1,66 +1,34 @@
-# GitHub Actions Runners for Portfolio Site
-# Using the new GitHub Actions Runner Controller API
-
 apiVersion: actions.github.com/v1alpha1
 kind: AutoscalingRunnerSet
 metadata:
-  name: portfolio-github-runners
+  name: portfolio-runners
   namespace: github-runners
   labels:
-    app: portfolio-github-runners
-    env: production
+    actions.github.com/scale-set-name: portfolio-runners
+    actions.github.com/scale-set-namespace: github-runners
+    app.kubernetes.io/component: autoscaling-runner-set
+    app.kubernetes.io/instance: portfolio-runners
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: portfolio-runners
+    app.kubernetes.io/part-of: gha-rs
+    app.kubernetes.io/version: 0.12.1
+    helm.sh/chart: gha-rs-0.12.1
   annotations:
-    argocd.argoproj.io/sync-wave: "1"  # Deploy after controller
+    argocd.argoproj.io/sync-wave: "1"
 spec:
-  # GitHub configuration
+  githubConfigSecret: github-runner-token
   githubConfigUrl: https://github.com/matthewmyrick/portfolio-site
-  githubConfigSecret: github-token
-  
-  # Minimum and maximum number of runners
-  minRunners: 0
   maxRunners: 2
-  
-  # Runner template
+  minRunners: 0
+  runnerScaleSetName: portfolio-runners
   template:
     spec:
       containers:
-      - name: runner
+      - command:
+        - /home/runner/run.sh
         image: ghcr.io/actions/actions-runner:latest
-        env:
-        - name: RUNNER_FEATURE_FLAG_ONCE
-          value: "true"
-        - name: DISABLE_RUNNER_UPDATE
-          value: "true"
-        resources:
-          requests:
-            cpu: 500m
-            memory: 1Gi
-          limits:
-            cpu: 2
-            memory: 4Gi
-        volumeMounts:
-        - name: work
-          mountPath: /runner/_work
-        - name: docker-sock
-          mountPath: /var/run/docker.sock
-          readOnly: false
-      
-      volumes:
-      - name: work
-        emptyDir: {}
-      - name: docker-sock
-        hostPath:
-          path: /var/run/docker.sock
-          type: Socket
-      
-      # Security context
-      securityContext:
-        runAsUser: 1001
-        runAsGroup: 121  # docker group
-        fsGroup: 121
-      
-      # Node selector (optional - run on specific nodes)
-      nodeSelector: {}
-      
-      # Tolerations (optional - allow scheduling on tainted nodes)
-      tolerations: []
+        name: runner
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      restartPolicy: Never
+      serviceAccountName: apollo-runners-gha-rs-no-permission
