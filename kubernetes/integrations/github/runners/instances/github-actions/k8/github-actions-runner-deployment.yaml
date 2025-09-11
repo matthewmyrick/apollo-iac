@@ -1,0 +1,34 @@
+apiVersion: actions.github.com/v1alpha1
+kind: AutoscalingRunnerSet
+metadata:
+  name: github-actions-runners
+  namespace: github-runners
+  labels:
+    actions.github.com/scale-set-name: github-actions-runners
+    actions.github.com/scale-set-namespace: github-runners
+    app.kubernetes.io/component: autoscaling-runner-set
+    app.kubernetes.io/instance: github-actions-runners
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: github-actions-runners
+    app.kubernetes.io/part-of: gha-rs
+    app.kubernetes.io/version: 0.12.1
+    helm.sh/chart: gha-rs-0.12.1
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  githubConfigSecret: github-runner-token
+  githubConfigUrl: https://github.com/matthewmyrick/github-actions
+  maxRunners: 2
+  minRunners: 0
+  runnerScaleSetName: github-actions-runners
+  template:
+    spec:
+      containers:
+      - command:
+        - /home/runner/run.sh
+        image: ghcr.io/actions/actions-runner:latest
+        name: runner
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      restartPolicy: Never
+      serviceAccountName: apollo-runners-gha-rs-no-permission
