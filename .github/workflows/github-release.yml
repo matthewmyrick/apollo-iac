@@ -1,13 +1,12 @@
 name: Github Release
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
 
 jobs:
-  hello-2:
+  github-release:
     runs-on: apollo-runners
 
     steps:
