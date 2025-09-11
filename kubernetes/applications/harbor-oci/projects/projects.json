@@ -6,5 +6,9 @@
   {
     "name": "backend",
     "description": "Backend services and APIs"
+  },
+  {
+    "name": "apollo-projects",
+    "description": "Apollo cluster application images"
   }
 ]

@@ -36,7 +36,7 @@ log_step() {
 print_banner() {
   echo -e "${CYAN}"
   echo "╔═══════════════════════════════════════════╗"
-  echo "║         Harbor Registry Creator           ║"
+  echo "║         Harbor Project Creator            ║"
   echo "║           for Apollo Cluster              ║"
   echo "╚═══════════════════════════════════════════╝"
   echo -e "${NC}\n"
@@ -49,11 +49,11 @@ HARBOR_PASSWORD="Harbor12345"
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REGISTRIES_FILE="${SCRIPT_DIR}/registries.json"
+PROJECTS_FILE="${SCRIPT_DIR}/projects.json"
 
-# Check if registries.json exists
-if [[ ! -f "$REGISTRIES_FILE" ]]; then
-  log_error "registries.json file not found at: $REGISTRIES_FILE"
+# Check if projects.json exists
+if [[ ! -f "$PROJECTS_FILE" ]]; then
+  log_error "projects.json file not found at: $PROJECTS_FILE"
   exit 1
 fi
 
@@ -212,18 +212,18 @@ test_harbor_auth
 # List existing projects
 list_projects
 
-# Create registries
-log_step "Creating Harbor registries from $REGISTRIES_FILE"
+# Create projects
+log_step "Creating Harbor projects from $PROJECTS_FILE"
 
 # Read and parse the JSON file
-REGISTRIES_JSON=$(cat "$REGISTRIES_FILE")
+PROJECTS_JSON=$(cat "$PROJECTS_FILE")
 
-# Parse each registry from the JSON
-echo "$REGISTRIES_JSON" | jq -c '.[]' | while read -r registry; do
-  project_name=$(echo "$registry" | jq -r '.name')
-  project_description=$(echo "$registry" | jq -r '.description')
+# Parse each project from the JSON
+echo "$PROJECTS_JSON" | jq -c '.[]' | while read -r project; do
+  project_name=$(echo "$project" | jq -r '.name')
+  project_description=$(echo "$project" | jq -r '.description')
 
-  log_info "Processing registry: $project_name"
+  log_info "Processing project: $project_name"
   create_harbor_project "$project_name" "$project_description"
 done
 
@@ -231,24 +231,24 @@ done
 
 # Final status
 echo -e "\n${GREEN}═══════════════════════════════════════════════${NC}"
-echo -e "${GREEN}${BOLD}    Harbor Registries Created Successfully! 📦${NC}"
+echo -e "${GREEN}${BOLD}    Harbor Projects Created Successfully! 📦${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════${NC}\n"
 
 # List projects again to show the result
 list_projects
 
-echo -e "${CYAN}${BOLD}Registry Usage Examples:${NC}"
+echo -e "${CYAN}${BOLD}Project Usage Examples:${NC}"
 
 # Show usage examples based on created registries
-echo "$REGISTRIES_JSON" | jq -r '.[0:2] | .[] | .name' | while read -r registry_name; do
-  echo -e "${BLUE}Tag and push to ${registry_name}:${NC}"
-  echo -e "  docker tag myapp:latest home.apollo.io:30003/${registry_name}/myapp:latest"
-  echo -e "  docker push home.apollo.io:30003/${registry_name}/myapp:latest"
+echo "$PROJECTS_JSON" | jq -r '.[0:2] | .[] | .name' | while read -r project_name; do
+  echo -e "${BLUE}Tag and push to ${project_name}:${NC}"
+  echo -e "  docker tag myapp:latest home.apollo.io:30003/${project_name}/myapp:latest"
+  echo -e "  docker push home.apollo.io:30003/${project_name}/myapp:latest"
   echo -e ""
 done
 
 echo -e "${YELLOW}${BOLD}💡 Next Steps:${NC}"
-echo -e "${BLUE}1. Configure your CI/CD pipelines to use these registries${NC}"
+echo -e "${BLUE}1. Configure your CI/CD pipelines to use these projects${NC}"
 echo -e "${BLUE}2. Set up RBAC permissions for different teams${NC}"
 echo -e "${BLUE}3. Configure image scanning policies${NC}"
 echo -e "${BLUE}4. Set up replication rules if needed${NC}"
