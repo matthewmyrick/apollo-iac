@@ -38,19 +38,29 @@ jobs:
           # Determine bump type based on commit message
           if [[ $COMMIT_MSG == *"major:"* ]]; then
             BUMP_TYPE="major"
+            SHOULD_RELEASE="true"
           elif [[ $COMMIT_MSG == *"minor:"* ]]; then
             BUMP_TYPE="minor"
+            SHOULD_RELEASE="true"
           elif [[ $COMMIT_MSG == *"patch:"* ]]; then
             BUMP_TYPE="patch"
+            SHOULD_RELEASE="true"
           else
-            BUMP_TYPE="patch"  # Default to patch
+            BUMP_TYPE="none"
+            SHOULD_RELEASE="false"
+            echo "⏭️ No version bump keyword found in commit message."
+            echo "💡 To trigger a release, include 'major:', 'minor:', or 'patch:' in your commit message."
+            echo "🚫 Skipping release creation."
           fi
 
           echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "should_release=$SHOULD_RELEASE" >> $GITHUB_OUTPUT
           echo "Bump type determined: $BUMP_TYPE"
+          echo "Should release: $SHOULD_RELEASE"
 
       - name: Calculate new version
         id: new_version
+        if: steps.version_bump.outputs.should_release == 'true'
         run: |
           LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
           BUMP_TYPE="${{ steps.version_bump.outputs.bump_type }}"
@@ -85,6 +95,7 @@ jobs:
           echo "New version: $NEW_VERSION"
 
       - name: Create and push tag
+        if: steps.version_bump.outputs.should_release == 'true'
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.new_version }}"
           git config user.name "github-actions[bot]"
@@ -93,12 +104,11 @@ jobs:
           git push origin $NEW_VERSION
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: steps.version_bump.outputs.should_release == 'true'
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.new_version.outputs.new_version }}
-          release_name: Release ${{ steps.new_version.outputs.new_version }}
+          name: Release ${{ steps.new_version.outputs.new_version }}
           body: |
             🚀 **Apollo IAC Release ${{ steps.new_version.outputs.new_version }}**
 
@@ -117,28 +127,96 @@ jobs:
             ```
           draft: false
           prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release Summary
         run: |
-          echo "🎉 Release Summary 🎉"
-          echo "===================="
-          echo "📋 Previous Version: ${{ steps.get_tag.outputs.latest_tag }}"
-          echo "🚀 Released Version: ${{ steps.new_version.outputs.new_version }}"
-          echo "📈 Version Bump Type: ${{ steps.version_bump.outputs.bump_type }}"
-          echo "🏷️  Tag Created: ${{ steps.new_version.outputs.new_version }}"
-          echo "📦 GitHub Release: Created successfully"
-          echo ""
-          echo "🏗️  Infrastructure Components:"
-          echo "  • Kubernetes manifests and configurations"
-          echo "  • Harbor OCI registry setup (projects and registries)"
-          echo "  • GitHub Actions workflows and RBAC policies"
-          echo ""
-          echo "📝 Commit Details:"
-          echo "  • SHA: ${{ github.sha }}"
-          echo "  • Branch: ${{ github.ref_name }}"
-          echo "  • Author: ${{ github.actor }}"
-          echo "  • Message: ${{ github.event.head_commit.message }}"
-          echo ""
-          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.new_version.outputs.new_version }}"
-          echo ""
-          echo "✅ Release completed successfully!"
+          if [[ "${{ steps.version_bump.outputs.should_release }}" == "true" ]]; then
+            # Console output for successful release
+            echo "🎉 Release Summary 🎉"
+            echo "===================="
+            echo "📋 Previous Version: ${{ steps.get_tag.outputs.latest_tag }}"
+            echo "🚀 Released Version: ${{ steps.new_version.outputs.new_version }}"
+            echo "📈 Version Bump Type: ${{ steps.version_bump.outputs.bump_type }}"
+            echo "🏷️  Tag Created: ${{ steps.new_version.outputs.new_version }}"
+            echo "📦 GitHub Release: Created successfully"
+            echo ""
+            echo "✅ Release completed successfully!"
+            
+            # GitHub Actions Job Summary for release
+            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          # 🎉 Apollo IAC Release Summary
+          
+          ## 📦 Release Information
+          | Field | Value |
+          |-------|-------|
+          | 📋 Previous Version | ${{ steps.get_tag.outputs.latest_tag }} |
+          | 🚀 Released Version | **${{ steps.new_version.outputs.new_version }}** |
+          | 📈 Version Bump Type | `${{ steps.version_bump.outputs.bump_type }}` |
+          | 🏷️ Tag Created | ${{ steps.new_version.outputs.new_version }} |
+          | 📦 GitHub Release | ✅ Created successfully |
+          
+          ## 🏗️ Infrastructure Components Updated
+          - ✅ Kubernetes manifests and configurations
+          - ✅ Harbor OCI registry setup (projects and registries)
+          - ✅ GitHub Actions workflows and RBAC policies
+          
+          ## 📝 Commit Details
+          - **SHA:** `${{ github.sha }}`
+          - **Branch:** `${{ github.ref_name }}`
+          - **Author:** ${{ github.actor }}
+          - **Message:** ${{ github.event.head_commit.message }}
+          
+          ## 🔗 Quick Links
+          - [📦 Release Page](https://github.com/${{ github.repository }}/releases/tag/${{ steps.new_version.outputs.new_version }})
+          - [🏷️ Tag Details](https://github.com/${{ github.repository }}/releases/tag/${{ steps.new_version.outputs.new_version }})
+          - [📊 Repository](https://github.com/${{ github.repository }})
+          
+          ---
+          > ✅ **Release ${{ steps.new_version.outputs.new_version }} completed successfully!** 🚀
+          EOF
+          else
+            # Console output for skipped release
+            echo "⏭️ Release Workflow Summary"
+            echo "=========================="
+            echo "🚫 No release created"
+            echo "📝 Commit message: ${{ github.event.head_commit.message }}"
+            echo "💡 To create a release, include 'major:', 'minor:', or 'patch:' in your commit message"
+            echo ""
+            echo "✅ Workflow completed successfully (no release needed)"
+            
+            # GitHub Actions Job Summary for skipped release
+            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          # ⏭️ Apollo IAC Workflow Summary
+          
+          ## 🚫 No Release Created
+          
+          The workflow ran successfully but **no release was created** because the commit message did not contain a version bump keyword.
+          
+          ## 📝 Commit Information
+          | Field | Value |
+          |-------|-------|
+          | **SHA** | `${{ github.sha }}` |
+          | **Branch** | `${{ github.ref_name }}` |
+          | **Author** | ${{ github.actor }} |
+          | **Message** | ${{ github.event.head_commit.message }} |
+          
+          ## 💡 How to Trigger a Release
+          
+          To create a release, include one of these keywords in your commit message:
+          
+          - `major:` - For breaking changes (1.0.0 → 2.0.0)
+          - `minor:` - For new features (1.0.0 → 1.1.0)
+          - `patch:` - For bug fixes (1.0.0 → 1.0.1)
+          
+          ### Example commit messages:
+          ```
+          major: Complete rewrite of authentication system
+          minor: Add user dashboard functionality
+          patch: Fix login button styling issue
+          ```
+          
+          ---
+          > ✅ **Workflow completed successfully** - No release created 📋
+          EOF
+          fi
